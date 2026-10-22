@@ -11,7 +11,7 @@ import { Calculator, SquareSlash, Award, CheckCircle2, Zap } from 'lucide-react'
 export default function App() {
   const [lang, setLang] = useState<Language>(() => {
     try {
-      // 1. Check URL query param ?lang= (vital for Google search results and sharing)
+      // 1. Check URL query param ?lang=
       const urlParams = new URLSearchParams(window.location.search);
       const urlLang = urlParams.get('lang');
       if (urlLang && ['en', 'es', 'fr', 'pt', 'zh'].includes(urlLang)) {
@@ -23,17 +23,10 @@ export default function App() {
       if (saved && ['en', 'es', 'fr', 'pt', 'zh'].includes(saved)) {
         return saved as Language;
       }
-
-      // 3. Check browser language
-      const navLang = navigator.language.toLowerCase();
-      if (navLang.startsWith('zh')) return 'zh';
-      if (navLang.startsWith('es')) return 'es';
-      if (navLang.startsWith('fr')) return 'fr';
-      if (navLang.startsWith('pt')) return 'pt';
     } catch {
       // ignore
     }
-    return 'en';
+    return 'en'; // Strict default to English
   });
 
   const [activeTab, setActiveTab] = useState<'remainder' | 'completing' | 'practice'>('remainder');
@@ -81,16 +74,13 @@ export default function App() {
       />
 
       {/* Main Content Container */}
-      <main className="grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        {/* Hero Section - Clean & Minimalist */}
-        <div className="mb-6 text-center max-w-2xl mx-auto">
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 mb-2">
-            {activeTab === 'remainder' && t.appName}
-            {activeTab === 'completing' && t.ctsHeading}
-            {activeTab === 'practice' && t.practiceHeading}
-          </h1>
-          <p className="text-sm sm:text-base text-slate-600">
-            {t.appTagline}
+      <main className="grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        {/* Minimalist Subtitle */}
+        <div className="mb-4 text-center max-w-2xl mx-auto">
+          <p className="text-xs sm:text-sm font-medium text-slate-600">
+            {activeTab === 'remainder' && t.appTagline}
+            {activeTab === 'completing' && t.ctsSubheading}
+            {activeTab === 'practice' && t.practiceSubheading}
           </p>
         </div>
 

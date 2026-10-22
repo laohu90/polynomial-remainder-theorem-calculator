@@ -200,6 +200,35 @@ ${synthResult!.summaryIdentityLatex}`;
         </div>
       </div>
 
+      {/* Input Fields Section */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+        <div className="md:col-span-7">
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+            {t.polyInputLabel}
+          </label>
+          <input
+            type="text"
+            value={polyInput}
+            onChange={(e) => setPolyInput(e.target.value)}
+            placeholder={t.polyInputPlaceholder}
+            className="w-full px-4 py-2.5 text-sm font-mono bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors shadow-2xs"
+          />
+        </div>
+
+        <div className="md:col-span-5">
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+            {t.divisorInputLabel}
+          </label>
+          <input
+            type="text"
+            value={divisorInput}
+            onChange={(e) => setDivisorInput(e.target.value)}
+            placeholder={t.divisorInputPlaceholder}
+            className="w-full px-4 py-2.5 text-sm font-mono bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors shadow-2xs"
+          />
+        </div>
+      </div>
+
       {/* Quick Math Symbols (Collapsible) */}
       {showKeypad && (
         <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center gap-2 text-xs text-slate-600 animate-fadeIn">
