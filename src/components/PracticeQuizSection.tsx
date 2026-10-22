@@ -71,7 +71,18 @@ export const PracticeQuizSection: React.FC<PracticeQuizSectionProps> = ({ t }) =
   const currentProblem = practiceSet[problemIndex];
 
   const handleCheck = () => {
-    const val = parseFloat(userAnswer.trim());
+    const raw = userAnswer.trim();
+    let val = parseFloat(raw);
+    if (raw.includes('/')) {
+      const parts = raw.split('/');
+      if (parts.length === 2) {
+        const num = parseFloat(parts[0]);
+        const den = parseFloat(parts[1]);
+        if (!isNaN(num) && !isNaN(den) && den !== 0) {
+          val = num / den;
+        }
+      }
+    }
     if (isNaN(val)) return;
 
     const correct = Math.abs(val - currentProblem.correctRemainder) < 1e-4;

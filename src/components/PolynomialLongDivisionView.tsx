@@ -1,5 +1,5 @@
 import React from 'react';
-import { PolynomialLongDivisionResult } from '../utils/mathEngine';
+import { PolynomialLongDivisionResult, formatPolynomialLatex } from '../utils/mathEngine';
 import { MathView } from './MathView';
 import { Translations } from '../utils/i18n';
 import { Divide } from 'lucide-react';
@@ -10,6 +10,10 @@ interface PolynomialLongDivisionViewProps {
 }
 
 export const PolynomialLongDivisionView: React.FC<PolynomialLongDivisionViewProps> = ({ result, t }) => {
+  const quotientLatex = formatPolynomialLatex(result.quotientPoly);
+  const divisorLatex = formatPolynomialLatex(result.divisorPoly);
+  const dividendLatex = formatPolynomialLatex(result.dividendPoly);
+
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 md:p-6 my-4 shadow-xs">
       <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
@@ -29,38 +33,44 @@ export const PolynomialLongDivisionView: React.FC<PolynomialLongDivisionViewProp
         <div className="inline-block min-w-full">
           {/* Quotient Line */}
           <div className="pl-32 pb-1 text-indigo-800 font-bold border-b-2 border-slate-700">
-            <MathView math={result.quotientPoly.degree >= 0 ? `Q(x) = ${result.steps.map(s => s.quotientTermLatex).join(' + ').replace(/\+ -/g, '- ')}` : '0'} />
+            <MathView math={`Q(x) = ${quotientLatex}`} />
           </div>
 
           {/* Divisor & Dividend with Left Bracket */}
           <div className="flex items-baseline pt-1">
             <div className="w-28 text-right pr-3 font-bold text-slate-700 border-r-2 border-slate-700">
-              <MathView math={`${result.divisorPoly.coefficients[0] === 1 ? '' : result.divisorPoly.coefficients[0]}x ${result.divisorPoly.coefficients[1] >= 0 ? `+ ${result.divisorPoly.coefficients[1]}` : `- ${Math.abs(result.divisorPoly.coefficients[1])}`}`} />
+              <MathView math={divisorLatex} />
             </div>
             <div className="pl-4 font-bold text-slate-900">
-              <MathView math={result.steps[0]?.currentWorkingPolyLatex || ''} />
+              <MathView math={result.steps[0]?.currentWorkingPolyLatex || dividendLatex} />
             </div>
           </div>
 
           {/* Subtraction steps */}
-          <div className="pl-32 mt-3 space-y-3 text-sm">
-            {result.steps.map((step, idx) => (
-              <div key={idx} className="border-l-2 border-indigo-200 pl-4 py-1">
-                <div className="text-xs font-sans text-indigo-600 font-semibold mb-1">
-                  Step {step.stepNumber}: {step.explanation}
+          {result.steps.length > 0 ? (
+            <div className="pl-32 mt-3 space-y-3 text-sm">
+              {result.steps.map((step, idx) => (
+                <div key={idx} className="border-l-2 border-indigo-200 pl-4 py-1">
+                  <div className="text-xs font-sans text-indigo-600 font-semibold mb-1">
+                    Step {step.stepNumber}: {step.explanation}
+                  </div>
+                  <div className="text-red-700 font-mono">
+                    <span className="font-sans text-xs text-slate-500 mr-2">Subtract:</span>
+                    <MathView math={`- \\left( ${step.multipliedDivisorLatex} \\right)`} />
+                  </div>
+                  <div className="w-48 h-px bg-slate-400 my-1"></div>
+                  <div className="text-slate-900 font-semibold font-mono">
+                    <span className="font-sans text-xs text-slate-500 mr-2">Result:</span>
+                    <MathView math={step.resultingRemainderLatex || '0'} />
+                  </div>
                 </div>
-                <div className="text-red-700 font-mono">
-                  <span className="font-sans text-xs text-slate-500 mr-2">Subtract:</span>
-                  <MathView math={`- \\left( ${step.multipliedDivisorLatex} \\right)`} />
-                </div>
-                <div className="w-48 h-px bg-slate-400 my-1"></div>
-                <div className="text-slate-900 font-semibold font-mono">
-                  <span className="font-sans text-xs text-slate-500 mr-2">Result:</span>
-                  <MathView math={step.resultingRemainderLatex || '0'} />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="pl-32 mt-2 text-sm text-slate-500 font-sans">
+              Degree of dividend is 0 (constant polynomial). Division complete.
+            </div>
+          )}
 
           {/* Final Remainder */}
           <div className="mt-4 pt-3 border-t border-slate-300 pl-32 flex items-center gap-3">

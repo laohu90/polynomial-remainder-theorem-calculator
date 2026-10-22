@@ -85,7 +85,12 @@ export function parsePolynomial(input: string, variable = 'x'): { poly: Polynomi
     if (!raw) return { poly: null, error: "Please enter a polynomial" };
 
     // Replace unicode minus with standard minus
-    const clean = raw.replace(/−/g, '-').replace(/\*/g, '');
+    let clean = raw.replace(/−/g, '-').replace(/\*/g, '');
+
+    // Strip outer parentheses e.g. (2x^3 - 4x^2 + 3)
+    if (clean.startsWith('(') && clean.endsWith(')')) {
+      clean = clean.slice(1, -1);
+    }
 
     // Check valid characters
     const allowed = new RegExp(`^[0-9+\\-^${variable}.\\/]+$`, 'i');
@@ -268,7 +273,9 @@ export interface DivisorInfo {
 
 export function parseDivisor(input: string, variable = 'x'): { divisor: DivisorInfo | null; error: string | null } {
   try {
-    const clean = input.trim().replace(/\s+/g, '').replace(/−/g, '-').replace(/\*/g, '');
+    let clean = input.trim().replace(/[\s()]/g, '').replace(/−/g, '-').replace(/\*/g, '');
+    // Strip leading "x=" or "c="
+    clean = clean.replace(/^[xc]=/i, '');
     if (!clean) return { divisor: null, error: "Please enter a divisor (e.g., x - 2, 2x + 1, or a number)" };
 
     // Check if it's just a raw number (c)
@@ -606,6 +613,21 @@ export function computeRationalRootCandidates(poly: Polynomial): {
 
   const seen = new Set<string>();
   const candidates: RationalCandidate[] = [];
+
+  // When constant term is 0, x = 0 is always a candidate root
+  if (Math.abs(constantTerm) < 1e-9) {
+    const zeroFrac = createFraction(0, 1);
+    candidates.push({
+      p: 0,
+      q: 1,
+      value: 0,
+      fraction: zeroFrac,
+      display: "0",
+      isRoot: true,
+      remainder: 0,
+    });
+    seen.add("0/1");
+  }
 
   for (const sign of [1, -1]) {
     for (const p of pFactors) {
@@ -1088,7 +1110,7 @@ export function findFullPolynomialFactorization(poly: Polynomial): CompleteFacto
   }
 
   // Build factored LaTeX string
-  const leadStr = leading === 1 ? "" : leading === -1 ? "-" : `${leading}`;
+  let remainingLeading = leading;
   const factorTerms: string[] = [];
 
   for (const r of rootsFound) {
@@ -1103,12 +1125,25 @@ export function findFullPolynomialFactorization(poly: Polynomial): CompleteFacto
       const n = frac.n;
       const d = frac.d;
       term = n > 0 ? `(${d}${v} - ${n})` : `(${d}${v} + ${Math.abs(n)})`;
+      remainingLeading = remainingLeading / Math.pow(d, r.multiplicity);
     }
 
     if (r.multiplicity > 1) {
       term = `${term}^{${r.multiplicity}}`;
     }
     factorTerms.push(term);
+  }
+
+  const roundedLead = Math.round(remainingLeading * 1000) / 1000;
+  let leadStr = "";
+  if (Math.abs(roundedLead - 1) < 1e-6) {
+    leadStr = "";
+  } else if (Math.abs(roundedLead + 1) < 1e-6) {
+    leadStr = "-";
+  } else if (Number.isInteger(roundedLead)) {
+    leadStr = `${roundedLead}`;
+  } else {
+    leadStr = `${roundedLead}`;
   }
 
   let linearFactorsLatex = `${leadStr}${factorTerms.join('')}`;
