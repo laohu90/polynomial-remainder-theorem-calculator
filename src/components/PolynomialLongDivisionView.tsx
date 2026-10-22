@@ -20,10 +20,10 @@ export const PolynomialLongDivisionView: React.FC<PolynomialLongDivisionViewProp
         <Divide className="w-5 h-5 text-indigo-700" />
         <div>
           <h4 className="text-base sm:text-lg font-bold text-slate-900">
-            Method 3: Polynomial Long Division (Detailed Algebraic Layout)
+            {t.longDivTitle}
           </h4>
           <p className="text-xs sm:text-sm text-slate-600">
-            Standard high school step-by-step long division format with quotient on top, line-by-line subtractions, and remainder.
+            {t.longDivSub}
           </p>
         </div>
       </div>
@@ -52,15 +52,15 @@ export const PolynomialLongDivisionView: React.FC<PolynomialLongDivisionViewProp
               {result.steps.map((step, idx) => (
                 <div key={idx} className="border-l-2 border-indigo-200 pl-4 py-1">
                   <div className="text-xs font-sans text-indigo-600 font-semibold mb-1">
-                    Step {step.stepNumber}: {step.explanation}
+                    {t.synthStep} {step.stepNumber}
                   </div>
                   <div className="text-red-700 font-mono">
-                    <span className="font-sans text-xs text-slate-500 mr-2">Subtract:</span>
+                    <span className="font-sans text-xs text-slate-500 mr-2">{t.longDivSubtract}</span>
                     <MathView math={`- \\left( ${step.multipliedDivisorLatex} \\right)`} />
                   </div>
                   <div className="w-48 h-px bg-slate-400 my-1"></div>
                   <div className="text-slate-900 font-semibold font-mono">
-                    <span className="font-sans text-xs text-slate-500 mr-2">Result:</span>
+                    <span className="font-sans text-xs text-slate-500 mr-2">{t.longDivResult}</span>
                     <MathView math={step.resultingRemainderLatex || '0'} />
                   </div>
                 </div>
@@ -68,14 +68,14 @@ export const PolynomialLongDivisionView: React.FC<PolynomialLongDivisionViewProp
             </div>
           ) : (
             <div className="pl-32 mt-2 text-sm text-slate-500 font-sans">
-              Degree of dividend is 0 (constant polynomial). Division complete.
+              {t.longDivConstantNote}
             </div>
           )}
 
           {/* Final Remainder */}
           <div className="mt-4 pt-3 border-t border-slate-300 pl-32 flex items-center gap-3">
             <span className="text-xs uppercase tracking-wider font-bold text-slate-600 font-sans">
-              Final Remainder:
+              {t.longDivFinalRemainder}
             </span>
             <span className="px-3 py-1 bg-amber-100 text-amber-900 font-bold rounded-lg border border-amber-300">
               R = {result.remainder}

@@ -96,7 +96,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
             onClick={() => onSelectTab('practice')}
             className="hidden sm:inline-flex px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors whitespace-nowrap shrink-0 shadow-2xs"
           >
-            Test Your Knowledge
+            {t.testYourKnowledge}
           </button>
         </div>
       </div>

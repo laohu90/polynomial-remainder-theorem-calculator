@@ -27,13 +27,13 @@ export const EducationalGuide: React.FC<EducationalGuideProps> = ({ t }) => {
         {/* Section Header */}
         <div className="text-center mb-12">
           <span className="text-xs font-bold text-indigo-700 tracking-wider uppercase mb-1 block">
-            Algebra 2 & Precalculus Study Guide
+            {t.eduStudyGuideBadge}
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
             {t.eduTitle}
           </h2>
           <p className="text-base sm:text-lg text-slate-600 mt-2 max-w-2xl mx-auto">
-            Everything high school and college students need to master polynomial factoring, rapid root verification, and quadratic decomposition.
+            {t.eduSub}
           </p>
         </div>
 
@@ -49,7 +49,7 @@ export const EducationalGuide: React.FC<EducationalGuideProps> = ({ t }) => {
               {t.eduWhatIsRemainderContent}
             </p>
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
-              <span className="text-xs text-slate-500 font-semibold block mb-1">Mathematical Formula:</span>
+              <span className="text-xs text-slate-500 font-semibold block mb-1">{t.eduFormulaLabel}</span>
               <MathView math="P(x) = (x - c)Q(x) + R \implies P(c) = R" block={true} className="text-lg font-bold text-slate-900" />
             </div>
           </div>
@@ -64,7 +64,7 @@ export const EducationalGuide: React.FC<EducationalGuideProps> = ({ t }) => {
               {t.eduWhatIsFactorContent}
             </p>
             <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 text-center">
-              <span className="text-xs text-emerald-800 font-semibold block mb-1">Core Identity:</span>
+              <span className="text-xs text-emerald-800 font-semibold block mb-1">{t.eduIdentityLabel}</span>
               <MathView math="(x - c) \text{ divides } P(x) \iff P(c) = 0" block={true} className="text-lg font-bold text-emerald-950" />
             </div>
           </div>
@@ -75,63 +75,63 @@ export const EducationalGuide: React.FC<EducationalGuideProps> = ({ t }) => {
           <div className="flex items-center gap-2 mb-2 text-indigo-700">
             <BookmarkCheck className="w-6 h-6" />
             <h3 className="text-2xl font-extrabold text-slate-900">
-              Worked High School Algebra 2 Exam Examples
+              {t.workedExHeading}
             </h3>
           </div>
           <p className="text-base text-slate-600 mb-6">
-            Detailed step-by-step solutions to typical homework and test problems.
+            {t.workedExSub}
           </p>
 
           <div className="space-y-6">
             {/* Example 1 */}
             <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
               <div className="font-bold text-indigo-900 text-base mb-1">
-                Example 1: Finding Remainder Without Long Division
+                {t.ex1Heading}
               </div>
               <p className="text-sm text-slate-700 mb-2">
-                <strong>Problem:</strong> Find the remainder when <MathView math="P(x) = 2x^3 - 5x^2 + 4x - 6" /> is divided by <MathView math="(x - 3)" />.
+                <strong>{t.eduProblemLabel}</strong> {t.ex1Problem}
               </p>
               <div className="text-sm text-slate-800 bg-white p-3.5 rounded-lg border border-slate-200 font-sans space-y-1">
-                <p><strong>Step 1:</strong> Identify root <MathView math="c = 3" /> from <MathView math="x - 3 = 0" />.</p>
-                <p><strong>Step 2:</strong> Substitute <MathView math="x = 3" /> into <MathView math="P(x)" />:</p>
+                <p><strong>{t.eduStep1Label}</strong> {t.ex1Step1}</p>
+                <p><strong>{t.eduStep2Label}</strong> {t.ex1Step2}</p>
                 <div className="pl-4 font-mono text-slate-900">
                   <MathView math="P(3) = 2(3)^3 - 5(3)^2 + 4(3) - 6 = 2(27) - 5(9) + 12 - 6 = 54 - 45 + 12 - 6 = 15" block={true} />
                 </div>
-                <p><strong>Conclusion:</strong> According to the Remainder Theorem, the remainder is <span className="font-bold font-mono text-emerald-700">R = 15</span>.</p>
+                <p><strong>{t.eduConclusionLabel}</strong> {t.ex1Conc}</p>
               </div>
             </div>
 
             {/* Example 2 */}
             <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
               <div className="font-bold text-indigo-900 text-base mb-1">
-                Example 2: Verifying a Factor and Factoring Completely
+                {t.ex2Heading}
               </div>
               <p className="text-sm text-slate-700 mb-2">
-                <strong>Problem:</strong> Determine if <MathView math="(x - 2)" /> is a factor of <MathView math="P(x) = x^3 - 4x^2 + x + 6" />.
+                <strong>{t.eduProblemLabel}</strong> {t.ex2Problem}
               </p>
               <div className="text-sm text-slate-800 bg-white p-3.5 rounded-lg border border-slate-200 font-sans space-y-1">
-                <p><strong>Step 1:</strong> Evaluate <MathView math="P(2) = (2)^3 - 4(2)^2 + (2) + 6 = 8 - 16 + 2 + 6 = 0" />.</p>
-                <p><strong>Step 2:</strong> Since <MathView math="P(2) = 0" />, by the Factor Theorem, <MathView math="(x - 2)" /> is an exact factor.</p>
-                <p><strong>Step 3:</strong> Perform synthetic division to obtain quotient <MathView math="Q(x) = x^2 - 2x - 3" />.</p>
-                <p><strong>Step 4:</strong> Factor quadratic <MathView math="x^2 - 2x - 3 = (x - 3)(x + 1)" />.</p>
-                <p><strong>Final Factored Form:</strong> <MathView math="P(x) = (x - 2)(x - 3)(x + 1)" /></p>
+                <p><strong>{t.eduStep1Label}</strong> {t.ex2Step1}</p>
+                <p><strong>{t.eduStep2Label}</strong> {t.ex2Step2}</p>
+                <p><strong>{t.eduStep3Label}</strong> {t.ex2Step3}</p>
+                <p><strong>{t.eduStep4Label}</strong> {t.ex2Step4}</p>
+                <p><strong>{t.ex2Final}</strong> <MathView math="P(x) = (x - 2)(x - 3)(x + 1)" /></p>
               </div>
             </div>
 
             {/* Example 3 */}
             <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
               <div className="font-bold text-indigo-900 text-base mb-1">
-                Example 3: Completing the Square with Leading Coefficient a ≠ 1
+                {t.ex3Heading}
               </div>
               <p className="text-sm text-slate-700 mb-2">
-                <strong>Problem:</strong> Solve <MathView math="2x^2 + 8x - 10 = 0" /> by completing the square.
+                <strong>{t.eduProblemLabel}</strong> {t.ex3Problem}
               </p>
               <div className="text-sm text-slate-800 bg-white p-3.5 rounded-lg border border-slate-200 font-sans space-y-1">
-                <p><strong>Step 1:</strong> Divide by 2: <MathView math="x^2 + 4x - 5 = 0" />.</p>
-                <p><strong>Step 2:</strong> Move constant: <MathView math="x^2 + 4x = 5" />.</p>
-                <p><strong>Step 3:</strong> Magic number <MathView math="(4/2)^2 = 2^2 = 4" />. Add 4 to both sides: <MathView math="x^2 + 4x + 4 = 5 + 4 = 9" />.</p>
-                <p><strong>Step 4:</strong> Factor binomial square: <MathView math="(x + 2)^2 = 9" />.</p>
-                <p><strong>Step 5:</strong> Square root: <MathView math="x + 2 = \pm 3 \implies x_1 = 1,\; x_2 = -5" />.</p>
+                <p><strong>{t.eduStep1Label}</strong> {t.ex3Step1}</p>
+                <p><strong>{t.eduStep2Label}</strong> {t.ex3Step2}</p>
+                <p><strong>{t.eduStep3Label}</strong> {t.ex3Step3}</p>
+                <p><strong>{t.eduStep4Label}</strong> {t.ex3Step4}</p>
+                <p><strong>{t.eduStep5Label}</strong> {t.ex3Step5}</p>
               </div>
             </div>
           </div>
@@ -153,19 +153,19 @@ export const EducationalGuide: React.FC<EducationalGuideProps> = ({ t }) => {
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 <tr>
-                  <td className="py-3.5 px-4 font-semibold text-indigo-700">Remainder Theorem Direct Evaluation</td>
-                  <td className="py-3.5 px-4">Instant numerical remainder in ~10 seconds. No division table required.</td>
-                  <td className="py-3.5 px-4">SAT / ACT exam questions asking only for the remainder or testing if c is a root.</td>
+                  <td className="py-3.5 px-4 font-semibold text-indigo-700">{t.eduTableMethod1Name}</td>
+                  <td className="py-3.5 px-4">{t.eduTableMethod1Pros}</td>
+                  <td className="py-3.5 px-4">{t.eduTableMethod1Best}</td>
                 </tr>
                 <tr>
-                  <td className="py-3.5 px-4 font-semibold text-indigo-700">Synthetic Division (Ruffini Scheme)</td>
-                  <td className="py-3.5 px-4">Computes both quotient Q(x) and remainder R. 3x faster than long division using additions.</td>
-                  <td className="py-3.5 px-4">Factoring higher-degree polynomials when divisor is linear (x - c).</td>
+                  <td className="py-3.5 px-4 font-semibold text-indigo-700">{t.eduTableMethod2Name}</td>
+                  <td className="py-3.5 px-4">{t.eduTableMethod2Pros}</td>
+                  <td className="py-3.5 px-4">{t.eduTableMethod2Best}</td>
                 </tr>
                 <tr>
-                  <td className="py-3.5 px-4 font-semibold text-indigo-700">Polynomial Long Division</td>
-                  <td className="py-3.5 px-4">Universal method. Works for divisors of ANY degree (quadratic, cubic, etc.).</td>
-                  <td className="py-3.5 px-4">Non-linear divisors such as x² + 2x + 5 where synthetic division cannot be applied directly.</td>
+                  <td className="py-3.5 px-4 font-semibold text-indigo-700">{t.eduTableMethod3Name}</td>
+                  <td className="py-3.5 px-4">{t.eduTableMethod3Pros}</td>
+                  <td className="py-3.5 px-4">{t.eduTableMethod3Best}</td>
                 </tr>
               </tbody>
             </table>
@@ -183,16 +183,16 @@ export const EducationalGuide: React.FC<EducationalGuideProps> = ({ t }) => {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm font-medium text-amber-950">
             <div className="bg-white/90 p-4 rounded-xl border border-amber-200/80 shadow-2xs">
-              <span className="font-bold block mb-1 text-red-600">❌ Error: x³ - 1</span>
-              <span>Writing coefficients as [1, -1] instead of [1, 0, 0, -1]. Missing terms must have 0.</span>
+              <span className="font-bold block mb-1 text-red-600">{t.eduMistake1Title}</span>
+              <span>{t.eduMistake1Desc}</span>
             </div>
             <div className="bg-white/90 p-4 rounded-xl border border-amber-200/80 shadow-2xs">
-              <span className="font-bold block mb-1 text-red-600">❌ Error: Divisor (x + 4)</span>
-              <span>Using c = 4 instead of solving x + 4 = 0 ⇒ c = -4. Always flip the sign!</span>
+              <span className="font-bold block mb-1 text-red-600">{t.eduMistake2Title}</span>
+              <span>{t.eduMistake2Desc}</span>
             </div>
             <div className="bg-white/90 p-4 rounded-xl border border-amber-200/80 shadow-2xs">
-              <span className="font-bold block mb-1 text-red-600">❌ Error: Divisor (3x - 6)</span>
-              <span>Forgetting to divide quotient coefficients by leading coefficient 3.</span>
+              <span className="font-bold block mb-1 text-red-600">{t.eduMistake3Title}</span>
+              <span>{t.eduMistake3Desc}</span>
             </div>
           </div>
         </div>

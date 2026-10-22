@@ -6,16 +6,25 @@ import { CompletingTheSquareSection } from './components/CompletingTheSquareSect
 import { PracticeQuizSection } from './components/PracticeQuizSection';
 import { EducationalGuide } from './components/EducationalGuide';
 import { Footer } from './components/Footer';
-import { Calculator, SquareSlash, Award, CheckCircle2, Zap, Bookmark } from 'lucide-react';
+import { Calculator, SquareSlash, Award, CheckCircle2, Zap } from 'lucide-react';
 
 export default function App() {
   const [lang, setLang] = useState<Language>(() => {
     try {
+      // 1. Check URL query param ?lang= (vital for Google search results and sharing)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlLang = urlParams.get('lang');
+      if (urlLang && ['en', 'es', 'fr', 'pt', 'zh'].includes(urlLang)) {
+        return urlLang as Language;
+      }
+
+      // 2. Check localStorage
       const saved = localStorage.getItem('calc_lang');
       if (saved && ['en', 'es', 'fr', 'pt', 'zh'].includes(saved)) {
         return saved as Language;
       }
-      // Check user agent language
+
+      // 3. Check browser language
       const navLang = navigator.language.toLowerCase();
       if (navLang.startsWith('zh')) return 'zh';
       if (navLang.startsWith('es')) return 'es';
@@ -29,17 +38,36 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'remainder' | 'completing' | 'practice'>('remainder');
 
+  const t = translations[lang];
+
+  // Dynamically update document title, description, and html lang attribute
+  useEffect(() => {
+    try {
+      document.documentElement.lang = lang;
+      document.title = t.metaTitle;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) {
+        metaDesc.setAttribute('content', t.metaDesc);
+      }
+    } catch {
+      // ignore
+    }
+  }, [lang, t]);
+
   const handleSelectLang = (newLang: Language) => {
     setLang(newLang);
     try {
       localStorage.setItem('calc_lang', newLang);
       document.documentElement.lang = newLang;
+
+      // Update URL search param ?lang= without full page reload
+      const url = new URL(window.location.href);
+      url.searchParams.set('lang', newLang);
+      window.history.replaceState({}, '', url.toString());
     } catch {
       // ignore
     }
   };
-
-  const t = translations[lang];
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 flex flex-col">
@@ -58,7 +86,7 @@ export default function App() {
         <div className="mb-8 text-center max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-3 py-1 rounded-full mb-3 shadow-2xs">
             <Zap className="w-3.5 h-3.5 text-indigo-600" />
-            <span>High School Algebra 2 & Precalculus Math Engine</span>
+            <span>{t.heroBadge}</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 text-balance mb-3">
@@ -72,15 +100,15 @@ export default function App() {
           </p>
 
           {/* Value proposition badges */}
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mt-4 text-xs sm:text-sm text-slate-500 font-medium">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mt-4 text-xs sm:text-sm text-slate-600 font-medium">
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Free Step-by-Step Solutions
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> {t.heroFeature1}
             </span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Synthetic Division Tables
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> {t.heroFeature2}
             </span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Completing the Square Walkthrough
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> {t.heroFeature3}
             </span>
           </div>
         </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SyntheticDivisionResult, formatFraction } from '../utils/mathEngine';
 import { Translations } from '../utils/i18n';
 import { MathView } from './MathView';
-import { Play, RotateCcw, ChevronRight } from 'lucide-react';
+import { RotateCcw, ChevronRight } from 'lucide-react';
 
 interface SyntheticDivisionTableProps {
   result: SyntheticDivisionResult;
@@ -11,7 +11,6 @@ interface SyntheticDivisionTableProps {
 
 export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ result, t }) => {
   const [currentStep, setCurrentStep] = useState<number>(result.topRow.length - 1);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   const totalSteps = result.topRow.length;
 
@@ -21,12 +20,10 @@ export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ 
 
   const handleReset = () => {
     setCurrentStep(0);
-    setIsPlaying(false);
   };
 
   const handleShowAll = () => {
     setCurrentStep(totalSteps - 1);
-    setIsPlaying(false);
   };
 
   const cDisplay = result.cFraction.d !== 1 ? formatFraction(result.cFraction) : `${result.c}`;
@@ -47,21 +44,21 @@ export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ 
             title="Reset steps"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset</span>
+            <span>{t.synthReset}</span>
           </button>
           <button
             onClick={handleNext}
             disabled={currentStep >= totalSteps - 1}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-2xs"
           >
-            <span>Next Step</span>
+            <span>{t.synthNext}</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleShowAll}
             className="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors shadow-2xs"
           >
-            Show All
+            {t.synthShowAll}
           </button>
         </div>
       </div>
@@ -118,7 +115,7 @@ export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ 
             {/* Bottom row: Quotient coefficients & Remainder */}
             <div className="flex items-center gap-3 py-2">
               <div className="w-16 sm:w-20 shrink-0 text-center text-xs font-semibold text-slate-500 border-r-2 border-slate-400 py-1">
-                Result
+                {t.synthColResult}
               </div>
               <div className="flex items-center gap-4 sm:gap-6 px-3">
                 {result.bottomRow.map((val, idx) => {
@@ -146,7 +143,7 @@ export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ 
 
             {/* Column Label / Powers */}
             <div className="flex items-center gap-3 pt-2 text-xs text-slate-500 font-sans">
-              <div className="w-16 sm:w-20 shrink-0 text-center">Power</div>
+              <div className="w-16 sm:w-20 shrink-0 text-center">{t.synthColPower}</div>
               <div className="flex items-center gap-4 sm:gap-6 px-3">
                 {result.topRow.map((_, idx) => {
                   const p = result.topRow.length - 1 - idx;
@@ -154,7 +151,7 @@ export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ 
                   return (
                     <div key={`power-${idx}`} className="w-14 sm:w-16 text-center font-mono">
                       {isRemainder ? (
-                        <span className="font-bold text-indigo-700">Remainder</span>
+                        <span className="font-bold text-indigo-700">{t.synthColRemainder}</span>
                       ) : (
                         <span>x^{p - 1 >= 0 ? p - 1 : 0}</span>
                       )}
@@ -171,20 +168,22 @@ export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ 
       {result.steps[currentStep] && (
         <div className="mt-4 p-3.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 flex items-start gap-2.5">
           <span className="shrink-0 font-semibold px-2 py-0.5 text-xs bg-indigo-100 text-indigo-800 rounded">
-            Step {currentStep + 1} of {totalSteps}
+            {t.synthStep} {currentStep + 1} {t.synthOf} {totalSteps}
           </span>
-          <p className="leading-relaxed">{result.steps[currentStep].explanation}</p>
+          <p className="leading-relaxed">
+            {currentStep === 0
+              ? `${t.bringDownStep}: ${result.topRow[0]}`
+              : `${t.multiplyAndAdd}: ${result.steps[currentStep].bottomResult}`}
+          </p>
         </div>
       )}
 
       {/* Non-monic divisor note (ax - b with a != 1) */}
       {result.divisorA !== 1 && (
         <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs sm:text-sm text-blue-900">
-          <p className="font-semibold mb-1">Notice: Leading coefficient in divisor a = {result.divisorA}</p>
-          <p className="leading-relaxed">
-            The raw values in the bottom row divide the polynomial by (x - {cDisplay}). To divide by ({result.divisorA}x - {result.cFraction.n}), each quotient coefficient must be divided by {result.divisorA}:
-            <br />
-            Quotient coefficients: [{result.quotientCoefficients.join(', ')}]
+          <p className="font-semibold mb-1">{t.syntheticTableNote}</p>
+          <p className="leading-relaxed font-mono">
+            Q(x) = [{result.quotientCoefficients.join(', ')}]
           </p>
         </div>
       )}
@@ -192,7 +191,7 @@ export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ 
       {/* Polynomial Identity */}
       <div className="mt-4 pt-4 border-t border-slate-200 text-center sm:text-left">
         <span className="text-xs uppercase tracking-wider font-semibold text-slate-500 block mb-1">
-          Division Algorithm Identity: P(x) = D(x) · Q(x) + R
+          {t.synthDivisionIdentity}
         </span>
         <MathView math={result.summaryIdentityLatex} block={true} className="text-base sm:text-lg text-slate-900" />
       </div>

@@ -49,7 +49,7 @@ export const Footer: React.FC<FooterProps> = ({ t, onSelectTab }) => {
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>100% Free · Step-by-Step Solver · No Paywalls · Mobile Optimized</span>
+            <span>{t.footerPledge}</span>
           </div>
 
           <div className="flex items-center gap-3">

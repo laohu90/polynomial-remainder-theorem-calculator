@@ -14,54 +14,54 @@ interface PracticeProblem {
   isFactor: boolean;
 }
 
-const practiceSet: PracticeProblem[] = [
-  {
-    id: 1,
-    polyStr: "2x^3 - 4x^2 + 3x - 5",
-    divisorStr: "x - 2",
-    questionText: "Find the remainder when P(x) = 2x³ - 4x² + 3x - 5 is divided by (x - 2).",
-    correctRemainder: 1,
-    isFactor: false,
-  },
-  {
-    id: 2,
-    polyStr: "x^3 - 3x^2 - 4x + 12",
-    divisorStr: "x - 3",
-    questionText: "Use the Factor Theorem to determine if (x - 3) is a factor of P(x) = x³ - 3x² - 4x + 12. Enter the remainder:",
-    correctRemainder: 0,
-    isFactor: true,
-  },
-  {
-    id: 3,
-    polyStr: "x^4 - 16",
-    divisorStr: "x + 2",
-    questionText: "Calculate the remainder of P(x) = x⁴ - 16 divided by (x + 2):",
-    correctRemainder: 0,
-    isFactor: true,
-  },
-  {
-    id: 4,
-    polyStr: "3x^3 + 5x^2 - 11x + 3",
-    divisorStr: "2x - 1",
-    questionText: "Find the remainder when P(x) = 3x³ + 5x² - 11x + 3 is divided by (2x - 1). (c = 1/2 = 0.5):",
-    correctRemainder: -0.875,
-    isFactor: false,
-  },
-  {
-    id: 5,
-    polyStr: "x^3 + 2x^2 - 5x - 6",
-    divisorStr: "x + 1",
-    questionText: "Is (x + 1) an exact factor of P(x) = x³ + 2x² - 5x - 6? Enter remainder R:",
-    correctRemainder: 0,
-    isFactor: true,
-  },
-];
-
 interface PracticeQuizSectionProps {
   t: Translations;
 }
 
 export const PracticeQuizSection: React.FC<PracticeQuizSectionProps> = ({ t }) => {
+  const practiceSet: PracticeProblem[] = [
+    {
+      id: 1,
+      polyStr: "2x^3 - 4x^2 + 3x - 5",
+      divisorStr: "x - 2",
+      questionText: t.quizQ1,
+      correctRemainder: 1,
+      isFactor: false,
+    },
+    {
+      id: 2,
+      polyStr: "x^3 - 3x^2 - 4x + 12",
+      divisorStr: "x - 3",
+      questionText: t.quizQ2,
+      correctRemainder: 0,
+      isFactor: true,
+    },
+    {
+      id: 3,
+      polyStr: "x^4 - 16",
+      divisorStr: "x + 2",
+      questionText: t.quizQ3,
+      correctRemainder: 0,
+      isFactor: true,
+    },
+    {
+      id: 4,
+      polyStr: "3x^3 + 5x^2 - 11x + 3",
+      divisorStr: "2x - 1",
+      questionText: t.quizQ4,
+      correctRemainder: -0.875,
+      isFactor: false,
+    },
+    {
+      id: 5,
+      polyStr: "x^3 + 2x^2 - 5x - 6",
+      divisorStr: "x + 1",
+      questionText: t.quizQ5,
+      correctRemainder: 0,
+      isFactor: true,
+    },
+  ];
+
   const [problemIndex, setProblemIndex] = useState<number>(0);
   const [userAnswer, setUserAnswer] = useState<string>("");
   const [submitted, setSubmitted] = useState<boolean>(false);
@@ -113,8 +113,8 @@ export const PracticeQuizSection: React.FC<PracticeQuizSectionProps> = ({ t }) =
 
       {/* Progress pill */}
       <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 text-xs font-semibold text-slate-500">
-        <span>Problem {problemIndex + 1} of {practiceSet.length}</span>
-        <span>High School Algebra 2 Exam Prep</span>
+        <span>{t.practiceProblemN} {problemIndex + 1} {t.synthOf} {practiceSet.length}</span>
+        <span>{t.practiceExamTag}</span>
       </div>
 
       {/* Question Card */}
@@ -123,8 +123,8 @@ export const PracticeQuizSection: React.FC<PracticeQuizSectionProps> = ({ t }) =
           {currentProblem.questionText}
         </p>
         <div className="flex flex-wrap items-center gap-4 text-sm font-mono text-indigo-900 bg-white p-3 rounded-lg border border-indigo-100">
-          <div><span className="font-sans text-xs text-slate-500 block">Polynomial P(x):</span> {currentProblem.polyStr}</div>
-          <div className="border-l border-slate-200 pl-4"><span className="font-sans text-xs text-slate-500 block">Divisor D(x):</span> {currentProblem.divisorStr}</div>
+          <div><span className="font-sans text-xs text-slate-500 block">{t.polyInputLabel}:</span> {currentProblem.polyStr}</div>
+          <div className="border-l border-slate-200 pl-4"><span className="font-sans text-xs text-slate-500 block">{t.divisorInputLabel}:</span> {currentProblem.divisorStr}</div>
         </div>
       </div>
 
@@ -133,13 +133,12 @@ export const PracticeQuizSection: React.FC<PracticeQuizSectionProps> = ({ t }) =
         <div className="relative">
           <label className="text-xs font-semibold text-slate-700 block mb-1">{t.practiceYourAnswer}</label>
           <input
-            type="number"
-            step="any"
+            type="text"
             value={userAnswer}
             onChange={(e) => setUserAnswer(e.target.value)}
             disabled={submitted && isCorrect === true}
             className="w-48 px-4 py-2.5 text-base font-mono bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="e.g. 0 or 1"
+            placeholder={t.practiceAnswerPlaceholder}
           />
         </div>
 
@@ -179,15 +178,15 @@ export const PracticeQuizSection: React.FC<PracticeQuizSectionProps> = ({ t }) =
               {isCorrect ? t.practiceCorrect : t.practiceIncorrect}
             </h4>
             <p className="text-xs mt-1">
-              Correct Remainder R = {currentProblem.correctRemainder}.{' '}
-              {currentProblem.isFactor ? 'By the Factor Theorem, it is an exact factor!' : 'It does not divide evenly.'}
+              {t.remainderBadge} = {currentProblem.correctRemainder}.{' '}
+              {currentProblem.isFactor ? t.factorTheoremTrue : t.factorTheoremFalse}
             </p>
           </div>
           <button
             onClick={() => setShowFullSolution(!showFullSolution)}
             className="text-xs font-semibold underline underline-offset-2 hover:opacity-80 shrink-0"
           >
-            {showFullSolution ? 'Hide Solution' : t.practiceShowSolution}
+            {showFullSolution ? t.practiceHideSolution : t.practiceShowSolution}
           </button>
         </div>
       )}
@@ -195,11 +194,11 @@ export const PracticeQuizSection: React.FC<PracticeQuizSectionProps> = ({ t }) =
       {/* Full Solution Breakdown (if toggled) */}
       {showFullSolution && remResult && synthResult && (
         <div className="mt-4 pt-4 border-t border-slate-200">
-          <h4 className="text-base font-bold text-slate-900 mb-2">Step-by-Step Proof</h4>
+          <h4 className="text-base font-bold text-slate-900 mb-2">{t.stepByStepProof}</h4>
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
             <div>
               <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider block mb-1">
-                Direct Evaluation P({remResult.c}):
+                {t.directEvaluation} P({remResult.c}):
               </span>
               <MathView
                 math={`P(${remResult.c}) = ${remResult.directSubstitutionLatex} = ${remResult.expandedCalculationLatex} = ${remResult.remainder}`}

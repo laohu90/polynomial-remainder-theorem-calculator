@@ -22,11 +22,11 @@ export const RationalRootsGrid: React.FC<RationalRootsGridProps> = ({ poly, t, o
       {/* Factors breakdown */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-slate-700 mb-4 bg-white p-3 rounded-lg border border-slate-200">
         <div>
-          <span className="font-semibold text-indigo-700">Factors of Constant Term ({result.constantTerm}):</span>
+          <span className="font-semibold text-indigo-700">{t.factorsOfConstant} ({result.constantTerm}):</span>
           <span className="font-mono ml-2">p ∈ &#123;{result.pFactors.join(', ')}&#125;</span>
         </div>
         <div>
-          <span className="font-semibold text-indigo-700">Factors of Leading Coeff ({result.leadingCoeff}):</span>
+          <span className="font-semibold text-indigo-700">{t.factorsOfLeading} ({result.leadingCoeff}):</span>
           <span className="font-mono ml-2">q ∈ &#123;{result.qFactors.join(', ')}&#125;</span>
         </div>
       </div>
@@ -44,7 +44,7 @@ export const RationalRootsGrid: React.FC<RationalRootsGridProps> = ({ poly, t, o
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold hover:bg-emerald-100 ring-2 ring-emerald-500/20'
                   : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
               }`}
-              title={`Test x = ${cand.display} in Remainder Theorem (P(${cand.display}) = ${cand.remainder})`}
+              title={`P(${cand.display}) = ${cand.remainder}`}
             >
               <span>{cand.display}</span>
               {isActualRoot ? (
@@ -58,7 +58,7 @@ export const RationalRootsGrid: React.FC<RationalRootsGridProps> = ({ poly, t, o
       </div>
       <p className="text-xs text-slate-500 mt-2">
         <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5 align-middle"></span>
-        Green highlighted candidates are confirmed roots (<span className="font-mono">P(c) = 0</span>). Click any value to load it directly into the calculator.
+        {t.rationalGreenTip}
       </p>
     </div>
   );

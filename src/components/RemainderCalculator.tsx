@@ -248,7 +248,7 @@ ${synthResult!.summaryIdentityLatex}`;
         <div className="p-4 mb-6 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm flex items-start gap-2.5">
           <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">Input Syntax Error</p>
+            <p className="font-semibold">{t.inputSyntaxError}</p>
             <p>{parsed.error}</p>
           </div>
         </div>
@@ -261,7 +261,7 @@ ${synthResult!.summaryIdentityLatex}`;
           <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs uppercase tracking-wider font-bold text-slate-500 mr-2">
-                Views:
+                {t.viewLabel}
               </span>
               <button
                 onClick={() => setActiveViewMode('all')}
@@ -271,7 +271,7 @@ ${synthResult!.summaryIdentityLatex}`;
                     : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                All 3 Methods
+                {t.viewAllMethods}
               </button>
               <button
                 onClick={() => setActiveViewMode('direct')}
@@ -281,7 +281,7 @@ ${synthResult!.summaryIdentityLatex}`;
                     : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                Direct P(c)
+                {t.viewDirect}
               </button>
               <button
                 onClick={() => setActiveViewMode('synthetic')}
@@ -291,7 +291,7 @@ ${synthResult!.summaryIdentityLatex}`;
                     : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                Synthetic Division
+                {t.viewSynthetic}
               </button>
               <button
                 onClick={() => setActiveViewMode('longDivision')}
@@ -301,7 +301,7 @@ ${synthResult!.summaryIdentityLatex}`;
                     : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                Long Division
+                {t.viewLongDivision}
               </button>
             </div>
 
@@ -357,7 +357,7 @@ ${synthResult!.summaryIdentityLatex}`;
                 R = {parsed.remResult!.remainder}
               </div>
               <span className="text-xs sm:text-sm text-slate-600 mt-1 block">
-                Evaluated at root <span className="font-mono font-bold">c = {parsed.remResult!.c}</span>
+                {t.evaluatedAtRoot} <span className="font-mono font-bold">c = {parsed.remResult!.c}</span>
               </span>
             </div>
 
@@ -387,7 +387,7 @@ ${synthResult!.summaryIdentityLatex}`;
               </div>
               <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
                 {parsed.remResult!.isFactor
-                  ? `${t.factorTheoremTrue} Therefore, (${parsed.divisor!.divisorString}) divides P(x) with zero remainder.`
+                  ? `${t.factorTheoremTrue} (${parsed.divisor!.divisorString}) ${t.dividesWithZeroRemainder}`
                   : `${t.factorTheoremFalse} ${parsed.remResult!.remainder}.`}
               </p>
 
@@ -395,7 +395,7 @@ ${synthResult!.summaryIdentityLatex}`;
               {parsed.fullFactorResult && (
                 <div className="mt-3 pt-3 border-t border-slate-200/60 flex flex-wrap items-center gap-2">
                   <span className="text-xs font-bold text-indigo-800 uppercase">
-                    Full Polynomial Factoring:
+                    {t.factoredFormLabel}:
                   </span>
                   <MathView
                     math={`P(x) = ${parsed.fullFactorResult.linearFactorsLatex}`}
@@ -426,7 +426,7 @@ ${synthResult!.summaryIdentityLatex}`;
 
               <div className="bg-slate-50 rounded-xl p-4 sm:p-5 border border-slate-200 space-y-3">
                 <div>
-                  <span className="text-xs text-slate-500 font-bold block mb-1">Step 1: Direct Substitution</span>
+                  <span className="text-xs text-slate-500 font-bold block mb-1">{t.method1Step1}</span>
                   <MathView
                     math={`P(${parsed.remResult!.c}) = ${parsed.remResult!.directSubstitutionLatex}`}
                     block={true}
@@ -435,7 +435,7 @@ ${synthResult!.summaryIdentityLatex}`;
                 </div>
 
                 <div>
-                  <span className="text-xs text-slate-500 font-bold block mb-1">Step 2: Arithmetic Evaluation of Powers</span>
+                  <span className="text-xs text-slate-500 font-bold block mb-1">{t.method1Step2}</span>
                   <MathView
                     math={`P(${parsed.remResult!.c}) = ${parsed.remResult!.expandedCalculationLatex}`}
                     block={true}
@@ -444,7 +444,7 @@ ${synthResult!.summaryIdentityLatex}`;
                 </div>
 
                 <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
-                  <span className="text-xs font-bold text-indigo-700 uppercase">Remainder Value:</span>
+                  <span className="text-xs font-bold text-indigo-700 uppercase">{t.method1RemainderVal}</span>
                   <span className="text-xl font-bold font-mono text-slate-900">
                     R = P({parsed.remResult!.c}) = {parsed.remResult!.remainder}
                   </span>
