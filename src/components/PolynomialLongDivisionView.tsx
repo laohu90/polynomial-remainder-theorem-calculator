@@ -48,17 +48,17 @@ export const PolynomialLongDivisionView: React.FC<PolynomialLongDivisionViewProp
 
           {/* Subtraction steps */}
           {result.steps.length > 0 ? (
-            <div className="pl-32 mt-3 space-y-3 text-sm">
+            <div className="pl-32 mt-3 space-y-2.5 text-sm">
               {result.steps.map((step, idx) => (
-                <div key={idx} className="border-l-2 border-indigo-200 pl-4 py-1">
-                  <div className="text-xs font-sans text-indigo-600 font-semibold mb-1">
+                <div key={idx} className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-lg">
+                  <div className="text-xs font-sans text-indigo-700 font-semibold mb-1">
                     {t.synthStep} {step.stepNumber}
                   </div>
-                  <div className="text-red-700 font-mono">
+                  <div className="text-rose-700 font-mono">
                     <span className="font-sans text-xs text-slate-500 mr-2">{t.longDivSubtract}</span>
                     <MathView math={`- \\left( ${step.multipliedDivisorLatex} \\right)`} />
                   </div>
-                  <div className="w-48 h-px bg-slate-400 my-1"></div>
+                  <div className="w-full max-w-xs border-b border-slate-300 my-1.5" />
                   <div className="text-slate-900 font-semibold font-mono">
                     <span className="font-sans text-xs text-slate-500 mr-2">{t.longDivResult}</span>
                     <MathView math={step.resultingRemainderLatex || '0'} />

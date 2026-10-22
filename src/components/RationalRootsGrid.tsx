@@ -56,9 +56,9 @@ export const RationalRootsGrid: React.FC<RationalRootsGridProps> = ({ poly, t, o
           );
         })}
       </div>
-      <p className="text-xs text-slate-500 mt-2">
-        <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5 align-middle"></span>
-        {t.rationalGreenTip}
+      <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
+        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+        <span>{t.rationalGreenTip}</span>
       </p>
     </div>
   );

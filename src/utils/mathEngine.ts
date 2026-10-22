@@ -75,6 +75,19 @@ export interface Polynomial {
   variable: string;
 }
 
+function parseCoeff(str: string): number {
+  str = str.trim();
+  if (str.includes('/')) {
+    const parts = str.split('/');
+    if (parts.length === 2) {
+      const n = parseFloat(parts[0]);
+      const d = parseFloat(parts[1]);
+      if (!isNaN(n) && !isNaN(d) && d !== 0) return n / d;
+    }
+  }
+  return parseFloat(str);
+}
+
 /**
  * Parse polynomial string like:
  * "2x^3 - 4x^2 + 3x - 5" or "x^4 + 2x^2 - 1" or "3x^2+5x-2"
@@ -113,7 +126,7 @@ export function parsePolynomial(input: string, variable = 'x'): { poly: Polynomi
 
       if (vIndex === -1) {
         // Constant term
-        const val = parseFloat(term);
+        const val = parseCoeff(term);
         if (isNaN(val)) return { poly: null, error: `Invalid constant term: ${term}` };
         powerMap[0] = (powerMap[0] || 0) + val;
       } else {
@@ -123,7 +136,7 @@ export function parsePolynomial(input: string, variable = 'x'): { poly: Polynomi
         if (coeffPart === '' || coeffPart === '+') coeff = 1;
         else if (coeffPart === '-') coeff = -1;
         else {
-          coeff = parseFloat(coeffPart);
+          coeff = parseCoeff(coeffPart);
           if (isNaN(coeff)) return { poly: null, error: `Invalid coefficient in term: ${term}` };
         }
 
@@ -170,6 +183,7 @@ export function parsePolynomial(input: string, variable = 'x'): { poly: Polynomi
   }
 }
 
+
 /**
  * Format polynomial to display string (e.g. 2x^3 - 4x^2 + 3x - 5)
  */
@@ -181,13 +195,16 @@ export function formatPolynomial(poly: Polynomial): string {
   for (let i = 0; i < coefficients.length; i++) {
     const c = coefficients[i];
     const power = degree - i;
-    if (Math.abs(c) < 1e-9 && terms.length > 0 && i < coefficients.length - 1) continue;
-    if (Math.abs(c) < 1e-9 && terms.length === 0 && i === coefficients.length - 1) {
-      terms.push("0");
+    
+    // Skip zero coefficients except when it's the very last constant term and nothing has been added yet
+    if (Math.abs(c) < 1e-9) {
+      if (terms.length === 0 && i === coefficients.length - 1) {
+        terms.push("0");
+      }
       continue;
     }
 
-    let sign = c < 0 ? "-" : (terms.length > 0 ? "+" : "");
+    const sign = c < 0 ? "-" : (terms.length > 0 ? "+" : "");
     const absC = Math.abs(c);
     const absCStr = Number.isInteger(absC) ? absC.toString() : absC.toFixed(2).replace(/\.?0+$/, '');
 
@@ -223,9 +240,12 @@ export function formatPolynomialLatex(poly: Polynomial): string {
   for (let i = 0; i < coefficients.length; i++) {
     const c = coefficients[i];
     const power = degree - i;
-    if (Math.abs(c) < 1e-9 && terms.length > 0 && i < coefficients.length - 1) continue;
-    if (Math.abs(c) < 1e-9 && terms.length === 0 && i === coefficients.length - 1) {
-      terms.push("0");
+
+    // Skip zero coefficients except when it's the very last constant term and nothing has been added yet
+    if (Math.abs(c) < 1e-9) {
+      if (terms.length === 0 && i === coefficients.length - 1) {
+        terms.push("0");
+      }
       continue;
     }
 
@@ -274,8 +294,8 @@ export interface DivisorInfo {
 export function parseDivisor(input: string, variable = 'x'): { divisor: DivisorInfo | null; error: string | null } {
   try {
     let clean = input.trim().replace(/[\s()]/g, '').replace(/−/g, '-').replace(/\*/g, '');
-    // Strip leading "x=" or "c="
-    clean = clean.replace(/^[xc]=/i, '');
+    // Strip leading "x=" or "c=", or trailing "=0"
+    clean = clean.replace(/^[xc]=/i, '').replace(/=0$/i, '');
     if (!clean) return { divisor: null, error: "Please enter a divisor (e.g., x - 2, 2x + 1, or a number)" };
 
     // Check if it's just a raw number (c)
@@ -327,7 +347,7 @@ export function parseDivisor(input: string, variable = 'x'): { divisor: DivisorI
     if (beforeVar === '' || beforeVar === '+') a = 1;
     else if (beforeVar === '-') a = -1;
     else {
-      a = parseFloat(beforeVar);
+      a = parseCoeff(beforeVar);
       if (isNaN(a) || a === 0) return { divisor: null, error: `Invalid coefficient for '${variable}'` };
     }
 
@@ -335,7 +355,7 @@ export function parseDivisor(input: string, variable = 'x'): { divisor: DivisorI
     const afterVar = clean.substring(vIndex + variable.length);
     let constant = 0;
     if (afterVar !== '') {
-      constant = parseFloat(afterVar);
+      constant = parseCoeff(afterVar);
       if (isNaN(constant)) return { divisor: null, error: `Invalid constant in divisor: ${afterVar}` };
     }
 
@@ -957,11 +977,21 @@ export function performPolynomialLongDivision(
     const currentPower = dividend.degree - i;
     const qPower = currentPower - 1;
 
-    const qTermLatex = qPower === 0
-      ? `${qCoeff}`
-      : qPower === 1
-      ? `${qCoeff === 1 ? '' : qCoeff === -1 ? '-' : qCoeff}${v}`
-      : `${qCoeff === 1 ? '' : qCoeff === -1 ? '-' : qCoeff}${v}^{${qPower}}`;
+    let qTermLatex = "";
+    if (Math.abs(qCoeff) < 1e-9) {
+      qTermLatex = "0";
+    } else {
+      const absQ = Math.abs(qCoeff);
+      const absQStr = Number.isInteger(absQ) ? absQ.toString() : absQ.toFixed(2).replace(/\.?0+$/, '');
+      const sign = qCoeff < 0 ? "-" : "";
+      if (qPower === 0) {
+        qTermLatex = `${sign}${absQStr}`;
+      } else if (qPower === 1) {
+        qTermLatex = absQ === 1 ? `${sign}${v}` : `${sign}${absQStr}${v}`;
+      } else {
+        qTermLatex = absQ === 1 ? `${sign}${v}^{${qPower}}` : `${sign}${absQStr}${v}^{${qPower}}`;
+      }
+    }
 
     // Multiplied by divisor: qCoeff * (a * x + (-b))
     const multLead = qCoeff * divisor.a; // equals leadWorking
@@ -1180,38 +1210,33 @@ export function parseQuadraticEquationString(input: string): { a: number; b: num
     const pLhs = parsePolynomial(lhs);
     if (pLhs.error) return { a: 1, b: 0, c: 0, error: pLhs.error };
 
-    let rhsVal = 0;
-    if (rhs && rhs !== '0') {
-      const pRhs = parsePolynomial(rhs);
-      if (pRhs.error) return { a: 1, b: 0, c: 0, error: `Invalid right side: ${pRhs.error}` };
-      // Subtract rhs terms from lhs
-      const maxD = Math.max(pLhs.poly!.degree, pRhs.poly!.degree);
-      if (maxD > 2) {
-        return { a: 1, b: 0, c: 0, error: "Equation degree must be quadratic (maximum power 2)" };
-      }
-    }
-
-    const poly = pLhs.poly!;
-    if (poly.degree > 2) {
-      return { a: 1, b: 0, c: 0, error: "Completing the square applies to quadratic equations (degree 2)" };
-    }
-
     let a = 0;
     let b = 0;
     let c = 0;
 
-    for (let i = 0; i < poly.coefficients.length; i++) {
-      const p = poly.degree - i;
-      if (p === 2) a = poly.coefficients[i];
-      else if (p === 1) b = poly.coefficients[i];
-      else if (p === 0) c = poly.coefficients[i];
+    const polyLhs = pLhs.poly!;
+    for (let i = 0; i < polyLhs.coefficients.length; i++) {
+      const p = polyLhs.degree - i;
+      if (p === 2) a += polyLhs.coefficients[i];
+      else if (p === 1) b += polyLhs.coefficients[i];
+      else if (p === 0) c += polyLhs.coefficients[i];
+      else if (p > 2 && Math.abs(polyLhs.coefficients[i]) > 1e-9) {
+        return { a: 1, b: 0, c: 0, error: "Equation degree must be quadratic (maximum power 2)" };
+      }
     }
 
-    // Subtract rhs if constant
     if (rhs && rhs !== '0') {
-      const rNum = parseFloat(rhs);
-      if (!isNaN(rNum)) {
-        c -= rNum;
+      const pRhs = parsePolynomial(rhs);
+      if (pRhs.error) return { a: 1, b: 0, c: 0, error: `Invalid right side: ${pRhs.error}` };
+      const polyRhs = pRhs.poly!;
+      for (let i = 0; i < polyRhs.coefficients.length; i++) {
+        const p = polyRhs.degree - i;
+        if (p === 2) a -= polyRhs.coefficients[i];
+        else if (p === 1) b -= polyRhs.coefficients[i];
+        else if (p === 0) c -= polyRhs.coefficients[i];
+        else if (p > 2 && Math.abs(polyRhs.coefficients[i]) > 1e-9) {
+          return { a: 1, b: 0, c: 0, error: "Equation degree must be quadratic (maximum power 2)" };
+        }
       }
     }
 

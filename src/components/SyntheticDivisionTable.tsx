@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SyntheticDivisionResult, formatFraction } from '../utils/mathEngine';
 import { Translations } from '../utils/i18n';
 import { MathView } from './MathView';
@@ -11,6 +11,10 @@ interface SyntheticDivisionTableProps {
 
 export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ result, t }) => {
   const [currentStep, setCurrentStep] = useState<number>(result.topRow.length - 1);
+
+  useEffect(() => {
+    setCurrentStep(result.topRow.length - 1);
+  }, [result]);
 
   const totalSteps = result.topRow.length;
 
@@ -66,10 +70,10 @@ export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ 
       {/* Synthetic Division Grid */}
       <div className="overflow-x-auto pb-2">
         <div className="inline-block min-w-full">
-          <div className="font-mono text-sm sm:text-base">
+          <div className="font-mono text-sm sm:text-base tabular-nums">
             {/* Top row: Root c on left, coefficients on right */}
             <div className="flex items-center gap-3 py-2">
-              <div className="w-16 sm:w-20 shrink-0 text-center font-bold text-indigo-700 bg-indigo-100/70 border-r-2 border-slate-400 py-1.5 rounded-l">
+              <div className="w-16 sm:w-20 shrink-0 text-center font-bold text-indigo-700 bg-indigo-50 border-r-2 border-slate-300 py-1.5 rounded-l">
                 c = {cDisplay}
               </div>
               <div className="flex items-center gap-4 sm:gap-6 px-3">
@@ -78,7 +82,7 @@ export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ 
                     key={`top-${idx}`}
                     className={`w-14 sm:w-16 text-center py-1 transition-all ${
                       idx <= currentStep ? 'opacity-100 font-semibold text-slate-800' : 'opacity-30 text-slate-400'
-                    } ${idx === currentStep ? 'bg-amber-100/80 rounded' : ''}`}
+                    } ${idx === currentStep ? 'bg-slate-200/80 rounded' : ''}`}
                   >
                     {coeff}
                   </div>
@@ -88,7 +92,7 @@ export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ 
 
             {/* Middle row: Multiplications */}
             <div className="flex items-center gap-3 py-2">
-              <div className="w-16 sm:w-20 shrink-0 text-center font-bold text-slate-400 border-r-2 border-slate-400 py-1.5">
+              <div className="w-16 sm:w-20 shrink-0 text-center font-bold text-slate-400 border-r-2 border-slate-300 py-1.5">
                 +
               </div>
               <div className="flex items-center gap-4 sm:gap-6 px-3">
@@ -110,11 +114,11 @@ export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ 
             </div>
 
             {/* Divider line */}
-            <div className="h-0.5 bg-slate-400 w-full my-1 ml-1" />
+            <div className="h-0.5 bg-slate-300 w-full my-1 ml-1" />
 
             {/* Bottom row: Quotient coefficients & Remainder */}
             <div className="flex items-center gap-3 py-2">
-              <div className="w-16 sm:w-20 shrink-0 text-center text-xs font-semibold text-slate-500 border-r-2 border-slate-400 py-1">
+              <div className="w-16 sm:w-20 shrink-0 text-center text-xs font-semibold text-slate-500 border-r-2 border-slate-300 py-1">
                 {t.synthColResult}
               </div>
               <div className="flex items-center gap-4 sm:gap-6 px-3">
@@ -129,8 +133,8 @@ export const SyntheticDivisionTable: React.FC<SyntheticDivisionTableProps> = ({ 
                           ? 'opacity-0'
                           : isRemainder
                           ? result.isFactor
-                            ? 'font-bold bg-emerald-100 text-emerald-900 border border-emerald-300'
-                            : 'font-bold bg-amber-100 text-amber-900 border border-amber-300'
+                            ? 'font-bold bg-emerald-50 text-emerald-900 border border-emerald-300'
+                            : 'font-bold bg-amber-50 text-amber-900 border border-amber-300'
                           : 'font-semibold bg-white border border-slate-200 text-slate-800'
                       }`}
                     >

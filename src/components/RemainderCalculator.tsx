@@ -180,29 +180,27 @@ ${synthResult!.summaryIdentityLatex}`;
         </p>
       </div>
 
-      {/* Preset Buttons */}
-      <div className="mb-6">
-        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">
-          {t.examplesTitle}
+      {/* Preset Row */}
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">
+          {t.examplesTitle}:
         </span>
-        <div className="flex flex-wrap gap-2">
-          {presets.map((p, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleApplyPreset(p)}
-              className="text-xs font-medium px-3.5 py-1.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 rounded-lg transition-colors border border-slate-200 shadow-2xs"
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        {presets.map((p, idx) => (
+          <button
+            key={idx}
+            onClick={() => handleApplyPreset(p)}
+            className="text-xs font-medium px-3 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 rounded-md transition-colors border border-slate-200"
+          >
+            {p.label}
+          </button>
+        ))}
       </div>
 
       {/* Input Fields */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         {/* Dividend P(x) */}
         <div className="md:col-span-2">
-          <label className="block text-sm font-semibold text-slate-700 mb-1">
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
             {t.polyInputLabel}
           </label>
           <input
@@ -210,13 +208,13 @@ ${synthResult!.summaryIdentityLatex}`;
             value={polyInput}
             onChange={(e) => setPolyInput(e.target.value)}
             placeholder={t.polyInputPlaceholder}
-            className="w-full px-4 py-3.5 text-lg sm:text-xl font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-4 py-3 text-base sm:text-lg font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
           />
         </div>
 
         {/* Divisor D(x) */}
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1">
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
             {t.divisorInputLabel}
           </label>
           <input
@@ -224,19 +222,19 @@ ${synthResult!.summaryIdentityLatex}`;
             value={divisorInput}
             onChange={(e) => setDivisorInput(e.target.value)}
             placeholder={t.divisorInputPlaceholder}
-            className="w-full px-4 py-3.5 text-lg sm:text-xl font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-4 py-3 text-base sm:text-lg font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
           />
         </div>
       </div>
 
-      {/* Quick Math Keypad */}
-      <div className="mb-6 flex flex-wrap items-center gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-lg">
-        <span className="text-xs font-semibold text-slate-500 mr-1">{t.keypadTitle}:</span>
+      {/* Quick Math Symbols */}
+      <div className="mb-6 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+        <span className="font-semibold text-slate-600 mr-1">{t.keypadTitle}:</span>
         {keypadTokens.map((tok, idx) => (
           <button
             key={idx}
             onClick={() => handleKeypadInsert(tok)}
-            className="px-3 py-1.5 text-xs font-mono font-medium bg-white hover:bg-slate-200 text-slate-700 border border-slate-200 rounded shadow-2xs transition-colors"
+            className="px-2.5 py-1 font-mono font-medium bg-slate-50 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded transition-colors"
           >
             {tok}
           </button>
@@ -245,8 +243,8 @@ ${synthResult!.summaryIdentityLatex}`;
 
       {/* Error State */}
       {parsed.error && (
-        <div className="p-4 mb-6 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm flex items-start gap-2.5">
-          <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+        <div className="p-4 mb-6 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-start gap-2.5">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">{t.inputSyntaxError}</p>
             <p>{parsed.error}</p>
@@ -257,165 +255,149 @@ ${synthResult!.summaryIdentityLatex}`;
       {/* Results Section */}
       {hasResult && (
         <div className="space-y-6 pt-2">
-          {/* Solution Action Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs uppercase tracking-wider font-bold text-slate-500 mr-2">
-                {t.viewLabel}
-              </span>
+          {/* Unified High-Impact Result Hero */}
+          <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50/60 shadow-2xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {/* Stat 1: Remainder */}
+              <div className="space-y-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
+                  {t.remainderBadge}
+                </span>
+                <div className="text-3xl sm:text-4xl font-extrabold font-mono text-slate-900 tabular-nums">
+                  R = {parsed.remResult!.remainder}
+                </div>
+                <p className="text-xs text-slate-500">
+                  {t.evaluatedAtRoot} <span className="font-mono font-semibold text-slate-700">c = {parsed.remResult!.c}</span>
+                </p>
+              </div>
+
+              {/* Stat 2: Factor Theorem Verdict */}
+              <div className="space-y-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
+                  {t.factorTheoremHeading}
+                </span>
+                <div className="flex items-center gap-2">
+                  {parsed.remResult!.isFactor ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-slate-400 shrink-0" />
+                  )}
+                  <span className={`text-base font-bold ${parsed.remResult!.isFactor ? 'text-emerald-700' : 'text-slate-700'}`}>
+                    {parsed.remResult!.isFactor ? t.isFactorBadge : t.isNotFactorBadge}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 leading-snug">
+                  {parsed.remResult!.isFactor
+                    ? `(${parsed.divisor!.divisorString}) ${t.dividesWithZeroRemainder}`
+                    : `R = ${parsed.remResult!.remainder} ≠ 0`}
+                </p>
+              </div>
+
+              {/* Stat 3: Quotient */}
+              <div className="space-y-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
+                  {t.quotientLabel}
+                </span>
+                <div className="text-base sm:text-lg font-bold text-slate-900 overflow-x-auto py-0.5">
+                  <MathView math={`Q(x) = ${formatPolynomialLatex(parsed.synthResult!.quotientPoly)}`} />
+                </div>
+              </div>
+            </div>
+
+            {/* Factored Form Banner (if factorable) */}
+            {parsed.fullFactorResult && (
+              <div className="mt-4 pt-4 border-t border-slate-200 flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-xs font-bold text-indigo-700 uppercase tracking-wide">
+                  {t.factoredFormLabel}:
+                </span>
+                <MathView
+                  math={`P(x) = ${parsed.fullFactorResult.linearFactorsLatex}`}
+                  className="font-semibold text-slate-900"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Method Explorer & Utility Actions Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            {/* View Mode Tabs */}
+            <div className="inline-flex p-1 bg-slate-100 rounded-lg border border-slate-200">
               <button
                 onClick={() => setActiveViewMode('all')}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
                   activeViewMode === 'all'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                    ? 'bg-white text-indigo-700 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {t.viewAllMethods}
               </button>
               <button
                 onClick={() => setActiveViewMode('direct')}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
                   activeViewMode === 'direct'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                    ? 'bg-white text-indigo-700 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {t.viewDirect}
               </button>
               <button
                 onClick={() => setActiveViewMode('synthetic')}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
                   activeViewMode === 'synthetic'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                    ? 'bg-white text-indigo-700 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {t.viewSynthetic}
               </button>
               <button
                 onClick={() => setActiveViewMode('longDivision')}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
                   activeViewMode === 'longDivision'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                    ? 'bg-white text-indigo-700 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {t.viewLongDivision}
               </button>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            {/* Utility Actions */}
+            <div className="flex items-center gap-2">
               <button
                 onClick={handleCopySteps}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors shadow-2xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs"
               >
-                {copiedSteps ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedSteps ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
                 <span>{copiedSteps ? t.stepsCopied : t.copySteps}</span>
               </button>
 
               <button
                 onClick={handleCopyLatex}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors shadow-2xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs"
               >
-                {copiedLatex ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Code className="w-3.5 h-3.5" />}
+                {copiedLatex ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Code className="w-3.5 h-3.5 text-slate-500" />}
                 <span>{copiedLatex ? t.latexCopied : t.copyLatex}</span>
               </button>
 
               <button
                 onClick={handleShareLink}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors shadow-2xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs"
               >
-                {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
+                {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5 text-slate-500" />}
                 <span>{copiedLink ? t.linkCopied : t.shareLink}</span>
               </button>
 
               <button
                 onClick={() => window.print()}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors shadow-2xs"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs"
               >
-                <Printer className="w-3.5 h-3.5" />
+                <Printer className="w-3.5 h-3.5 text-slate-500" />
                 <span>{t.printOrSave}</span>
               </button>
             </div>
-          </div>
-
-          {/* Primary High-Impact Output Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Remainder Badge Card */}
-            <div
-              className={`p-5 sm:p-6 rounded-2xl border ${
-                parsed.remResult!.isFactor
-                  ? 'bg-emerald-50/70 border-emerald-200'
-                  : 'bg-amber-50/70 border-amber-200'
-              }`}
-            >
-              <span className="text-xs font-bold uppercase tracking-wider block text-slate-500 mb-1">
-                {t.remainderBadge}
-              </span>
-              <div className="text-3xl sm:text-4xl font-extrabold font-mono text-slate-900">
-                R = {parsed.remResult!.remainder}
-              </div>
-              <span className="text-xs sm:text-sm text-slate-600 mt-1 block">
-                {t.evaluatedAtRoot} <span className="font-mono font-bold">c = {parsed.remResult!.c}</span>
-              </span>
-            </div>
-
-            {/* Factor Theorem Status Card */}
-            <div
-              className={`p-5 sm:p-6 rounded-2xl border sm:col-span-2 ${
-                parsed.remResult!.isFactor
-                  ? 'bg-emerald-50/70 border-emerald-200'
-                  : 'bg-slate-50 border-slate-200'
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                {parsed.remResult!.isFactor ? (
-                  <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
-                ) : (
-                  <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
-                )}
-                <span
-                  className={`text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md ${
-                    parsed.remResult!.isFactor
-                      ? 'bg-emerald-200/80 text-emerald-900'
-                      : 'bg-amber-200/80 text-amber-900'
-                  }`}
-                >
-                  {parsed.remResult!.isFactor ? t.isFactorBadge : t.isNotFactorBadge}
-                </span>
-              </div>
-              <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
-                {parsed.remResult!.isFactor
-                  ? `${t.factorTheoremTrue} (${parsed.divisor!.divisorString}) ${t.dividesWithZeroRemainder}`
-                  : `${t.factorTheoremFalse} ${parsed.remResult!.remainder}.`}
-              </p>
-
-              {/* Complete Factorization Ribbon */}
-              {parsed.fullFactorResult && (
-                <div className="mt-3 pt-3 border-t border-slate-200/60 flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-bold text-indigo-800 uppercase">
-                    {t.factoredFormLabel}:
-                  </span>
-                  <MathView
-                    math={`P(x) = ${parsed.fullFactorResult.linearFactorsLatex}`}
-                    className="text-base font-bold text-slate-900"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Quotient Display Card */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 sm:p-6">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
-              {t.quotientLabel}
-            </span>
-            <MathView
-              math={`Q(x) = ${formatPolynomialLatex(parsed.synthResult!.quotientPoly)}`}
-              block={true}
-              className="text-xl sm:text-2xl font-bold text-slate-900"
-            />
           </div>
 
           {/* Method 1: Direct Substitution (Remainder Theorem) */}
@@ -445,7 +427,7 @@ ${synthResult!.summaryIdentityLatex}`;
 
                 <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
                   <span className="text-xs font-bold text-indigo-700 uppercase">{t.method1RemainderVal}</span>
-                  <span className="text-xl font-bold font-mono text-slate-900">
+                  <span className="text-xl font-bold font-mono text-slate-900 tabular-nums">
                     R = P({parsed.remResult!.c}) = {parsed.remResult!.remainder}
                   </span>
                 </div>
