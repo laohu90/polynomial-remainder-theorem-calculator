@@ -4,6 +4,8 @@ import {
   parseDivisor,
   evaluateRemainderTheorem,
   performSyntheticDivision,
+  performPolynomialLongDivision,
+  findFullPolynomialFactorization,
   formatPolynomial,
   formatPolynomialLatex,
   Polynomial,
@@ -15,6 +17,7 @@ import {
 import { Translations } from '../utils/i18n';
 import { MathView } from './MathView';
 import { SyntheticDivisionTable } from './SyntheticDivisionTable';
+import { PolynomialLongDivisionView } from './PolynomialLongDivisionView';
 import { RationalRootsGrid } from './RationalRootsGrid';
 import {
   CheckCircle2,
@@ -26,7 +29,8 @@ import {
   Sparkles,
   ArrowRight,
   Code,
-  RotateCcw,
+  Divide,
+  BookOpen,
 } from 'lucide-react';
 
 interface RemainderCalculatorProps {
@@ -45,6 +49,7 @@ export const RemainderCalculator: React.FC<RemainderCalculatorProps> = ({
   const [copiedSteps, setCopiedSteps] = useState<boolean>(false);
   const [copiedLatex, setCopiedLatex] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [activeViewMode, setActiveViewMode] = useState<'all' | 'direct' | 'synthetic' | 'longDivision'>('all');
 
   // Sync with URL params on first mount if present
   useEffect(() => {
@@ -95,25 +100,16 @@ export const RemainderCalculator: React.FC<RemainderCalculatorProps> = ({
 
     const remResult = evaluateRemainderTheorem(poly, divisor);
     const synthResult = performSyntheticDivision(poly, divisor);
-
-    // If degree is 3 and remainder is 0, quotient is degree 2 (quadratic), we can solve it!
-    let furtherRootsInfo: string | null = null;
-    if (remResult.isFactor && synthResult.quotientPoly.degree === 2) {
-      const [qa, qb, qc] = synthResult.quotientPoly.coefficients;
-      try {
-        const quadSol = solveCompletingTheSquare(qa, qb, qc);
-        furtherRootsInfo = `Further Factorization: Since Q(x) = ${formatPolynomial(synthResult.quotientPoly)} is quadratic, solving Q(x) = 0 gives roots x = ${quadSol.roots.root1Str} and x = ${quadSol.roots.root2Str}.`;
-      } catch {
-        // ignore
-      }
-    }
+    const longDivResult = performPolynomialLongDivision(poly, divisor);
+    const fullFactorResult = findFullPolynomialFactorization(poly);
 
     return {
       poly,
       divisor,
       remResult,
       synthResult,
-      furtherRootsInfo,
+      longDivResult,
+      fullFactorResult,
       error: null,
     };
   }, [polyInput, divisorInput]);
@@ -138,7 +134,10 @@ ${remResult!.isFactor ? 'Since R = 0, (x - c) is an EXACT FACTOR of P(x).' : `Si
 Method 2: Synthetic Division
 Quotient Q(x) = ${formatPolynomial(synthResult!.quotientPoly)}
 Remainder R = ${synthResult!.remainder}
-Identity: ${synthResult!.summaryIdentityLatex}`;
+Identity: ${synthResult!.summaryIdentityLatex}
+
+Method 3: Complete Polynomial Factoring
+${parsed.fullFactorResult?.linearFactorsLatex}`;
 
     navigator.clipboard.writeText(text);
     setCopiedSteps(true);
@@ -169,10 +168,6 @@ ${synthResult!.summaryIdentityLatex}`;
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-xs">
       {/* Headings */}
@@ -180,7 +175,7 @@ ${synthResult!.summaryIdentityLatex}`;
         <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
           {t.calcHeading}
         </h2>
-        <p className="text-base text-slate-600 mt-1 leading-relaxed">
+        <p className="text-base sm:text-lg text-slate-600 mt-1 leading-relaxed">
           {t.calcSubheading}
         </p>
       </div>
@@ -195,7 +190,7 @@ ${synthResult!.summaryIdentityLatex}`;
             <button
               key={idx}
               onClick={() => handleApplyPreset(p)}
-              className="text-xs font-medium px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 rounded-lg transition-colors border border-slate-200"
+              className="text-xs font-medium px-3.5 py-1.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 rounded-lg transition-colors border border-slate-200 shadow-2xs"
             >
               {p.label}
             </button>
@@ -215,7 +210,7 @@ ${synthResult!.summaryIdentityLatex}`;
             value={polyInput}
             onChange={(e) => setPolyInput(e.target.value)}
             placeholder={t.polyInputPlaceholder}
-            className="w-full px-4 py-3 text-base sm:text-lg font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-4 py-3.5 text-lg sm:text-xl font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
 
@@ -229,7 +224,7 @@ ${synthResult!.summaryIdentityLatex}`;
             value={divisorInput}
             onChange={(e) => setDivisorInput(e.target.value)}
             placeholder={t.divisorInputPlaceholder}
-            className="w-full px-4 py-3 text-base sm:text-lg font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-4 py-3.5 text-lg sm:text-xl font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
       </div>
@@ -241,7 +236,7 @@ ${synthResult!.summaryIdentityLatex}`;
           <button
             key={idx}
             onClick={() => handleKeypadInsert(tok)}
-            className="px-2.5 py-1 text-xs font-mono font-medium bg-white hover:bg-slate-200 text-slate-700 border border-slate-200 rounded shadow-2xs transition-colors"
+            className="px-3 py-1.5 text-xs font-mono font-medium bg-white hover:bg-slate-200 text-slate-700 border border-slate-200 rounded shadow-2xs transition-colors"
           >
             {tok}
           </button>
@@ -264,10 +259,50 @@ ${synthResult!.summaryIdentityLatex}`;
         <div className="space-y-6 pt-2">
           {/* Solution Action Toolbar */}
           <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-            <div className="flex items-center gap-3">
-              <span className="text-xs uppercase tracking-wider font-bold text-slate-500">
-                {t.resultsTitle}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs uppercase tracking-wider font-bold text-slate-500 mr-2">
+                Views:
               </span>
+              <button
+                onClick={() => setActiveViewMode('all')}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  activeViewMode === 'all'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                All 3 Methods
+              </button>
+              <button
+                onClick={() => setActiveViewMode('direct')}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  activeViewMode === 'direct'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                Direct P(c)
+              </button>
+              <button
+                onClick={() => setActiveViewMode('synthetic')}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  activeViewMode === 'synthetic'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                Synthetic Division
+              </button>
+              <button
+                onClick={() => setActiveViewMode('longDivision')}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  activeViewMode === 'longDivision'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                Long Division
+              </button>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -296,7 +331,7 @@ ${synthResult!.summaryIdentityLatex}`;
               </button>
 
               <button
-                onClick={handlePrint}
+                onClick={() => window.print()}
                 className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors shadow-2xs"
               >
                 <Printer className="w-3.5 h-3.5" />
@@ -309,7 +344,7 @@ ${synthResult!.summaryIdentityLatex}`;
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Remainder Badge Card */}
             <div
-              className={`p-5 rounded-2xl border ${
+              className={`p-5 sm:p-6 rounded-2xl border ${
                 parsed.remResult!.isFactor
                   ? 'bg-emerald-50/70 border-emerald-200'
                   : 'bg-amber-50/70 border-amber-200'
@@ -318,30 +353,30 @@ ${synthResult!.summaryIdentityLatex}`;
               <span className="text-xs font-bold uppercase tracking-wider block text-slate-500 mb-1">
                 {t.remainderBadge}
               </span>
-              <div className="text-3xl font-extrabold font-mono text-slate-900">
+              <div className="text-3xl sm:text-4xl font-extrabold font-mono text-slate-900">
                 R = {parsed.remResult!.remainder}
               </div>
-              <span className="text-xs text-slate-600 mt-1 block">
-                Evaluated at root <span className="font-mono font-semibold">c = {parsed.remResult!.c}</span>
+              <span className="text-xs sm:text-sm text-slate-600 mt-1 block">
+                Evaluated at root <span className="font-mono font-bold">c = {parsed.remResult!.c}</span>
               </span>
             </div>
 
             {/* Factor Theorem Status Card */}
             <div
-              className={`p-5 rounded-2xl border sm:col-span-2 ${
+              className={`p-5 sm:p-6 rounded-2xl border sm:col-span-2 ${
                 parsed.remResult!.isFactor
                   ? 'bg-emerald-50/70 border-emerald-200'
                   : 'bg-slate-50 border-slate-200'
               }`}
             >
-              <div className="flex items-center gap-2 mb-1.5">
+              <div className="flex items-center gap-2 mb-2">
                 {parsed.remResult!.isFactor ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
                 ) : (
-                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                  <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
                 )}
                 <span
-                  className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                  className={`text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md ${
                     parsed.remResult!.isFactor
                       ? 'bg-emerald-200/80 text-emerald-900'
                       : 'bg-amber-200/80 text-amber-900'
@@ -350,66 +385,83 @@ ${synthResult!.summaryIdentityLatex}`;
                   {parsed.remResult!.isFactor ? t.isFactorBadge : t.isNotFactorBadge}
                 </span>
               </div>
-              <p className="text-sm text-slate-700 leading-relaxed">
+              <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
                 {parsed.remResult!.isFactor
                   ? `${t.factorTheoremTrue} Therefore, (${parsed.divisor!.divisorString}) divides P(x) with zero remainder.`
                   : `${t.factorTheoremFalse} ${parsed.remResult!.remainder}.`}
               </p>
+
+              {/* Complete Factorization Ribbon */}
+              {parsed.fullFactorResult && (
+                <div className="mt-3 pt-3 border-t border-slate-200/60 flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold text-indigo-800 uppercase">
+                    Full Polynomial Factoring:
+                  </span>
+                  <MathView
+                    math={`P(x) = ${parsed.fullFactorResult.linearFactorsLatex}`}
+                    className="text-base font-bold text-slate-900"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
           {/* Quotient Display Card */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 sm:p-6">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
               {t.quotientLabel}
             </span>
             <MathView
               math={`Q(x) = ${formatPolynomialLatex(parsed.synthResult!.quotientPoly)}`}
               block={true}
-              className="text-lg sm:text-xl font-bold text-slate-900"
+              className="text-xl sm:text-2xl font-bold text-slate-900"
             />
-            {parsed.furtherRootsInfo && (
-              <p className="text-xs sm:text-sm text-indigo-800 bg-indigo-50 border border-indigo-100 rounded-lg p-2.5 mt-2 font-medium">
-                💡 {parsed.furtherRootsInfo}
-              </p>
-            )}
           </div>
 
           {/* Method 1: Direct Substitution (Remainder Theorem) */}
-          <div className="border border-slate-200 rounded-xl p-5 md:p-6 bg-white shadow-2xs">
-            <h4 className="text-base font-bold text-slate-900 mb-1">{t.method1Title}</h4>
-            <p className="text-sm text-slate-600 mb-4">{t.method1Desc}</p>
+          {(activeViewMode === 'all' || activeViewMode === 'direct') && (
+            <div className="border border-slate-200 rounded-xl p-5 md:p-6 bg-white shadow-2xs">
+              <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-1">{t.method1Title}</h4>
+              <p className="text-sm sm:text-base text-slate-600 mb-4">{t.method1Desc}</p>
 
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 space-y-3">
-              <div>
-                <span className="text-xs text-slate-500 font-semibold block mb-1">Step 1: Direct Substitution</span>
-                <MathView
-                  math={`P(${parsed.remResult!.c}) = ${parsed.remResult!.directSubstitutionLatex}`}
-                  block={true}
-                  className="text-base text-slate-900 font-medium"
-                />
-              </div>
+              <div className="bg-slate-50 rounded-xl p-4 sm:p-5 border border-slate-200 space-y-3">
+                <div>
+                  <span className="text-xs text-slate-500 font-bold block mb-1">Step 1: Direct Substitution</span>
+                  <MathView
+                    math={`P(${parsed.remResult!.c}) = ${parsed.remResult!.directSubstitutionLatex}`}
+                    block={true}
+                    className="text-base sm:text-lg text-slate-900 font-semibold"
+                  />
+                </div>
 
-              <div>
-                <span className="text-xs text-slate-500 font-semibold block mb-1">Step 2: Arithmetic Evaluation of Powers</span>
-                <MathView
-                  math={`P(${parsed.remResult!.c}) = ${parsed.remResult!.expandedCalculationLatex}`}
-                  block={true}
-                  className="text-base text-slate-900 font-medium"
-                />
-              </div>
+                <div>
+                  <span className="text-xs text-slate-500 font-bold block mb-1">Step 2: Arithmetic Evaluation of Powers</span>
+                  <MathView
+                    math={`P(${parsed.remResult!.c}) = ${parsed.remResult!.expandedCalculationLatex}`}
+                    block={true}
+                    className="text-base sm:text-lg text-slate-900 font-semibold"
+                  />
+                </div>
 
-              <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
-                <span className="text-xs font-bold text-indigo-700 uppercase">Remainder Value:</span>
-                <span className="text-lg font-bold font-mono text-slate-900">
-                  R = P({parsed.remResult!.c}) = {parsed.remResult!.remainder}
-                </span>
+                <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                  <span className="text-xs font-bold text-indigo-700 uppercase">Remainder Value:</span>
+                  <span className="text-xl font-bold font-mono text-slate-900">
+                    R = P({parsed.remResult!.c}) = {parsed.remResult!.remainder}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Method 2: Synthetic Division Matrix */}
-          <SyntheticDivisionTable result={parsed.synthResult!} t={t} />
+          {(activeViewMode === 'all' || activeViewMode === 'synthetic') && (
+            <SyntheticDivisionTable result={parsed.synthResult!} t={t} />
+          )}
+
+          {/* Method 3: Polynomial Long Division Layout */}
+          {(activeViewMode === 'all' || activeViewMode === 'longDivision') && (
+            <PolynomialLongDivisionView result={parsed.longDivResult!} t={t} />
+          )}
 
           {/* Rational Root Theorem Grid */}
           <RationalRootsGrid

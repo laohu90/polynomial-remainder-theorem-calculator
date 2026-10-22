@@ -1,43 +1,62 @@
 import React, { useState, useMemo } from 'react';
-import { solveCompletingTheSquare, CompletingSquareResult, formatFraction } from '../utils/mathEngine';
+import {
+  solveCompletingTheSquare,
+  CompletingSquareResult,
+  parseQuadraticEquationString,
+  formatFraction,
+} from '../utils/mathEngine';
 import { Translations } from '../utils/i18n';
 import { MathView } from './MathView';
-import { CheckCircle2, Copy, Check, Sparkles, HelpCircle } from 'lucide-react';
+import { Copy, Check, Grid, Sparkles, HelpCircle } from 'lucide-react';
 
 interface CompletingTheSquareSectionProps {
   t: Translations;
 }
 
 export const CompletingTheSquareSection: React.FC<CompletingTheSquareSectionProps> = ({ t }) => {
+  const [equationMode, setEquationMode] = useState<'equation' | 'coefficients'>('equation');
+  const [equationInput, setEquationInput] = useState<string>("x^2 + 6x + 5 = 0");
   const [aInput, setAInput] = useState<string>("1");
   const [bInput, setBInput] = useState<string>("6");
   const [cInput, setCInput] = useState<string>("5");
   const [copied, setCopied] = useState<boolean>(false);
 
   const presets = [
-    { label: "Standard (x² + 6x + 5 = 0)", a: "1", b: "6", c: "5" },
-    { label: "Leading a ≠ 1 (2x² + 8x - 10 = 0)", a: "2", b: "8", c: "-10" },
-    { label: "Odd b (x² + 5x + 6 = 0)", a: "1", b: "5", c: "6" },
-    { label: "Complex Roots (x² - 4x + 13 = 0)", a: "1", b: "-4", c: "13" },
-    { label: "Perfect Square (x² - 6x + 9 = 0)", a: "1", b: "-6", c: "9" },
+    { label: "x² + 6x + 5 = 0 (Integer Roots)", eq: "x^2 + 6x + 5 = 0", a: "1", b: "6", c: "5" },
+    { label: "2x² + 8x - 10 = 0 (Leading a ≠ 1)", eq: "2x^2 + 8x - 10 = 0", a: "2", b: "8", c: "-10" },
+    { label: "x² + 5x + 6 = 0 (Fractional Square)", eq: "x^2 + 5x + 6 = 0", a: "1", b: "5", c: "6" },
+    { label: "x² - 4x + 13 = 0 (Complex Roots)", eq: "x^2 - 4x + 13 = 0", a: "1", b: "-4", c: "13" },
+    { label: "3x² - 12x + 9 = 0", eq: "3x^2 - 12x + 9 = 0", a: "3", b: "-12", c: "9" },
   ];
 
   const handlePreset = (p: typeof presets[0]) => {
+    setEquationInput(p.eq);
     setAInput(p.a);
     setBInput(p.b);
     setCInput(p.c);
   };
 
   const solution = useMemo<CompletingSquareResult | { error: string }>(() => {
-    const a = parseFloat(aInput);
-    const b = parseFloat(bInput);
-    const c = parseFloat(cInput);
+    let a = 1;
+    let b = 0;
+    let c = 0;
 
-    if (isNaN(a) || isNaN(b) || isNaN(c)) {
-      return { error: "Please enter valid numeric coefficients for a, b, and c." };
-    }
-    if (Math.abs(a) < 1e-9) {
-      return { error: "The leading coefficient 'a' cannot be 0 in a quadratic equation." };
+    if (equationMode === 'equation') {
+      const parsed = parseQuadraticEquationString(equationInput);
+      if (parsed.error) return { error: parsed.error };
+      a = parsed.a;
+      b = parsed.b;
+      c = parsed.c;
+    } else {
+      a = parseFloat(aInput);
+      b = parseFloat(bInput);
+      c = parseFloat(cInput);
+      if (isNaN(a) || isNaN(b) || isNaN(c)) {
+        return { error: "Please enter valid numeric coefficients for a, b, and c." };
+      }
+      if (Math.abs(a) < 1e-9) {
+        return { error: "The leading coefficient 'a' cannot be 0 in a quadratic equation." };
+      }
     }
 
     try {
@@ -45,7 +64,7 @@ export const CompletingTheSquareSection: React.FC<CompletingTheSquareSectionProp
     } catch (e: any) {
       return { error: e.message || "Failed to solve completing the square." };
     }
-  }, [aInput, bInput, cInput]);
+  }, [equationMode, equationInput, aInput, bInput, cInput]);
 
   const hasResult = !('error' in solution);
 
@@ -61,7 +80,7 @@ Roots: x1 = ${res.roots.root1Str}, x2 = ${res.roots.root2Str}`;
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Parabola SVG Graph Data
+  // Parabola graph data
   const graphData = useMemo(() => {
     if (!hasResult) return null;
     const res = solution as CompletingSquareResult;
@@ -69,17 +88,15 @@ Roots: x1 = ${res.roots.root1Str}, x2 = ${res.roots.root2Str}`;
     const k = res.vertexK;
     const a = res.a;
 
-    // View range centered near vertex
     const xSpan = 8;
     const minX = h - xSpan / 2;
     const maxX = h + xSpan / 2;
     const points: string[] = [];
 
     const width = 360;
-    const height = 200;
-    const margin = 20;
+    const height = 210;
+    const margin = 25;
 
-    // Evaluate y bounds
     const sampleY: number[] = [];
     for (let x = minX; x <= maxX; x += 0.2) {
       sampleY.push(a * Math.pow(x - h, 2) + k);
@@ -118,11 +135,15 @@ Roots: x1 = ${res.roots.root1Str}, x2 = ${res.roots.root2Str}`;
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-xs">
       <div className="max-w-3xl mb-6">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900">{t.ctsHeading}</h2>
-        <p className="text-base text-slate-600 mt-1">{t.ctsSubheading}</p>
+        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+          {t.ctsHeading}
+        </h2>
+        <p className="text-base sm:text-lg text-slate-600 mt-1 leading-relaxed">
+          {t.ctsSubheading}
+        </p>
       </div>
 
-      {/* Preset Pills */}
+      {/* Preset Buttons */}
       <div className="mb-6">
         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">
           {t.examplesTitle}
@@ -132,7 +153,7 @@ Roots: x1 = ${res.roots.root1Str}, x2 = ${res.roots.root2Str}`;
             <button
               key={idx}
               onClick={() => handlePreset(p)}
-              className="text-xs font-medium px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 rounded-lg transition-colors border border-slate-200"
+              className="text-xs font-medium px-3.5 py-1.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 rounded-lg transition-colors border border-slate-200 shadow-2xs"
             >
               {p.label}
             </button>
@@ -140,70 +161,103 @@ Roots: x1 = ${res.roots.root1Str}, x2 = ${res.roots.root2Str}`;
         </div>
       </div>
 
-      {/* Inputs for a, b, c */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1">{t.ctsInputA}</label>
-          <div className="relative">
+      {/* Mode Switcher */}
+      <div className="flex items-center gap-2 mb-4">
+        <button
+          onClick={() => setEquationMode('equation')}
+          className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+            equationMode === 'equation'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          Equation Input (e.g. x² + 6x + 5 = 0)
+        </button>
+        <button
+          onClick={() => setEquationMode('coefficients')}
+          className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+            equationMode === 'coefficients'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          Separate a, b, c Inputs
+        </button>
+      </div>
+
+      {/* Input Fields */}
+      {equationMode === 'equation' ? (
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-slate-700 mb-1">
+            Quadratic Equation
+          </label>
+          <input
+            type="text"
+            value={equationInput}
+            onChange={(e) => setEquationInput(e.target.value)}
+            placeholder="e.g. x^2 + 6x + 5 = 0 or 2x^2 + 8x - 10 = 0"
+            className="w-full px-4 py-3 text-lg font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">{t.ctsInputA}</label>
             <input
               type="number"
               value={aInput}
               onChange={(e) => setAInput(e.target.value)}
-              className="w-full px-4 py-2.5 text-base font-mono bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-4 py-3 text-lg font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="1"
             />
           </div>
-        </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1">{t.ctsInputB}</label>
-          <div className="relative">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">{t.ctsInputB}</label>
             <input
               type="number"
               value={bInput}
               onChange={(e) => setBInput(e.target.value)}
-              className="w-full px-4 py-2.5 text-base font-mono bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-4 py-3 text-lg font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="6"
             />
           </div>
-        </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1">{t.ctsInputC}</label>
-          <div className="relative">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">{t.ctsInputC}</label>
             <input
               type="number"
               value={cInput}
               onChange={(e) => setCInput(e.target.value)}
-              className="w-full px-4 py-2.5 text-base font-mono bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-4 py-3 text-lg font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="5"
             />
           </div>
         </div>
-      </div>
+      )}
 
       {/* Current equation formatted */}
-      <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <span className="text-xs uppercase tracking-wider font-bold text-indigo-800 block mb-0.5">
-            Quadratic Equation to Solve
-          </span>
-          <MathView
-            math={`${aInput || '1'}x^2 ${parseFloat(bInput) >= 0 ? `+ ${bInput || '0'}` : `- ${Math.abs(parseFloat(bInput) || 0)}`}x ${parseFloat(cInput) >= 0 ? `+ ${cInput || '0'}` : `- ${Math.abs(parseFloat(cInput) || 0)}`} = 0`}
-            className="text-lg font-semibold text-indigo-950"
-          />
-        </div>
+      {hasResult && (
+        <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <span className="text-xs uppercase tracking-wider font-bold text-indigo-800 block mb-0.5">
+              Standard Quadratic Equation
+            </span>
+            <MathView
+              math={`${(solution as CompletingSquareResult).a}x^2 ${(solution as CompletingSquareResult).b >= 0 ? `+ ${(solution as CompletingSquareResult).b}` : `- ${Math.abs((solution as CompletingSquareResult).b)}`}x ${(solution as CompletingSquareResult).c >= 0 ? `+ ${(solution as CompletingSquareResult).c}` : `- ${Math.abs((solution as CompletingSquareResult).c)}`} = 0`}
+              className="text-xl font-bold text-indigo-950"
+            />
+          </div>
 
-        {hasResult && (
           <button
             onClick={handleCopySteps}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors shadow-2xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors shadow-2xs"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copied ? t.stepsCopied : t.copySteps}</span>
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Error state */}
       {!hasResult && (
@@ -227,19 +281,19 @@ Roots: x1 = ${res.roots.root1Str}, x2 = ${res.roots.root2Str}`;
               const stepTitle = titles[step.stepNumber - 1] || `Step ${step.stepNumber}`;
 
               return (
-                <div key={step.stepNumber} className="p-5 bg-white hover:bg-slate-50/50 transition-colors">
-                  <div className="flex items-start gap-3">
-                    <span className="shrink-0 flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">
+                <div key={step.stepNumber} className="p-5 sm:p-6 bg-white hover:bg-slate-50/50 transition-colors">
+                  <div className="flex items-start gap-4">
+                    <span className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 text-indigo-800 text-sm font-bold">
                       {step.stepNumber}
                     </span>
                     <div className="grow">
-                      <h4 className="text-base font-semibold text-slate-900 mb-1">{stepTitle}</h4>
-                      <p className="text-sm text-slate-600 leading-relaxed mb-3">{step.explanation}</p>
-                      <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-3 text-center sm:text-left">
-                        <MathView math={step.mathLatex} block={true} className="text-base text-slate-900 font-medium" />
+                      <h4 className="text-lg font-bold text-slate-900 mb-1">{stepTitle}</h4>
+                      <p className="text-base text-slate-600 leading-relaxed mb-3">{step.explanation}</p>
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center sm:text-left">
+                        <MathView math={step.mathLatex} block={true} className="text-lg text-slate-900 font-semibold" />
                       </div>
                       {step.notes && (
-                        <p className="text-xs text-amber-700 mt-2 font-medium bg-amber-50 px-2.5 py-1 rounded inline-block">
+                        <p className="text-xs sm:text-sm text-amber-800 mt-2 font-medium bg-amber-50 px-3 py-1.5 rounded-lg inline-block border border-amber-200/50">
                           💡 {step.notes}
                         </p>
                       )}
@@ -250,46 +304,96 @@ Roots: x1 = ${res.roots.root1Str}, x2 = ${res.roots.root2Str}`;
             })}
           </div>
 
+          {/* Geometric Area Model Box (US High School Common Core Signature Model) */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 sm:p-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Grid className="w-5 h-5 text-indigo-600" />
+              <h4 className="text-base sm:text-lg font-bold text-slate-900">
+                Visual Geometric Area Model (Algebra Tiles Concept)
+              </h4>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-600 mb-4 leading-relaxed">
+              In US Algebra 2, completing the square is visualized as building a physical square of side length <span className="font-mono font-semibold">(x + b/2)</span>. The missing corner piece that completes the square is exactly <span className="font-mono font-semibold">(b/2)²</span>.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 p-4 bg-white rounded-xl border border-slate-200">
+              {/* Visual Box Diagram */}
+              <div className="relative w-48 h-48 border-2 border-indigo-600 rounded-lg p-1 bg-indigo-50/30 flex flex-col justify-between">
+                <div className="flex h-32 w-full gap-1">
+                  <div className="w-32 h-full bg-indigo-200 rounded border border-indigo-400 flex items-center justify-center font-bold text-indigo-900 text-sm">
+                    x²
+                  </div>
+                  <div className="grow h-full bg-blue-100 rounded border border-blue-300 flex items-center justify-center text-xs font-semibold text-blue-900 text-center p-1">
+                    ({formatFraction((solution as CompletingSquareResult).halfBOverA)})x
+                  </div>
+                </div>
+                <div className="flex h-12 w-full gap-1">
+                  <div className="w-32 h-full bg-blue-100 rounded border border-blue-300 flex items-center justify-center text-xs font-semibold text-blue-900">
+                    ({formatFraction((solution as CompletingSquareResult).halfBOverA)})x
+                  </div>
+                  <div className="grow h-full bg-amber-200 rounded border border-amber-400 flex items-center justify-center text-xs font-bold text-amber-900 text-center p-1">
+                    +({formatFraction((solution as CompletingSquareResult).magicSquare)})
+                  </div>
+                </div>
+              </div>
+
+              {/* Explanatory side */}
+              <div className="text-xs sm:text-sm text-slate-700 space-y-2 max-w-sm">
+                <div>
+                  <span className="font-bold text-indigo-900 block">Total Square Area:</span>
+                  <MathView math={`\\left(x + ${formatFraction((solution as CompletingSquareResult).halfBOverA)}\\right)^2`} className="text-base" />
+                </div>
+                <div>
+                  <span className="font-bold text-amber-800 block">Added Corner Piece (Magic Square):</span>
+                  <MathView math={`\\left(\\frac{b}{2a}\\right)^2 = ${formatFraction((solution as CompletingSquareResult).magicSquare)}`} className="text-base" />
+                </div>
+                <p className="text-xs text-slate-500">
+                  Adding this corner tile turns the L-shaped region <span className="font-mono">x² + {(solution as CompletingSquareResult).b}x</span> into a complete square.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Solution Summary & Parabola Vertex Card */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             {/* Left: Vertex Form & Roots */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
-              <h4 className="text-base font-bold text-slate-900 mb-3">{t.ctsVertexFormTitle}</h4>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 sm:p-6">
+              <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-3">{t.ctsVertexFormTitle}</h4>
               <div className="space-y-3 text-sm">
-                <div className="bg-white p-3 rounded-lg border border-slate-200">
+                <div className="bg-white p-3.5 rounded-lg border border-slate-200">
                   <span className="text-xs text-slate-500 font-medium block">Vertex Form Equation:</span>
                   <MathView
                     math={(solution as CompletingSquareResult).vertexFormLatex}
                     block={true}
-                    className="text-base font-semibold text-slate-900"
+                    className="text-lg font-bold text-slate-900"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white p-3 rounded-lg border border-slate-200">
                     <span className="text-xs text-slate-500 block">{t.ctsVertexCoordinates}</span>
-                    <span className="font-mono font-semibold text-slate-800">
+                    <span className="font-mono font-bold text-base text-slate-800">
                       ({(solution as CompletingSquareResult).vertexH.toFixed(2)},{' '}
                       {(solution as CompletingSquareResult).vertexK.toFixed(2)})
                     </span>
                   </div>
-                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                  <div className="bg-white p-3 rounded-lg border border-slate-200">
                     <span className="text-xs text-slate-500 block">{t.ctsDiscriminant}</span>
-                    <span className="font-mono font-semibold text-slate-800">
+                    <span className="font-mono font-bold text-base text-slate-800">
                       {(solution as CompletingSquareResult).discriminant}
                     </span>
                   </div>
                 </div>
 
-                <div className="bg-white p-3 rounded-lg border border-slate-200">
+                <div className="bg-white p-3.5 rounded-lg border border-slate-200">
                   <span className="text-xs text-slate-500 font-medium block mb-1">{t.ctsRootsFound}:</span>
-                  <div className="flex flex-col gap-1.5 font-mono">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 font-sans">x₁:</span>
+                  <div className="flex flex-col gap-2 font-mono">
+                    <div className="flex items-center justify-between text-base">
+                      <span className="text-slate-600 font-sans text-xs">x₁:</span>
                       <MathView math={(solution as CompletingSquareResult).roots.root1Latex} />
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 font-sans">x₂:</span>
+                    <div className="flex items-center justify-between text-base">
+                      <span className="text-slate-600 font-sans text-xs">x₂:</span>
                       <MathView math={(solution as CompletingSquareResult).roots.root2Latex} />
                     </div>
                   </div>
@@ -298,7 +402,7 @@ Roots: x1 = ${res.roots.root1Str}, x2 = ${res.roots.root2Str}`;
             </div>
 
             {/* Right: Interactive Parabola Curve Plot */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col items-center justify-center">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 sm:p-6 flex flex-col items-center justify-center">
               <div className="w-full flex items-center justify-between mb-2">
                 <h4 className="text-sm font-bold text-slate-900">Parabola Curve & Vertex</h4>
                 <span className="text-xs text-slate-500 font-mono">y = ax² + bx + c</span>
@@ -348,7 +452,7 @@ Roots: x1 = ${res.roots.root1Str}, x2 = ${res.roots.root2Str}`;
                     <text
                       x={graphData.vertexSvgX + 8}
                       y={graphData.vertexSvgY - 6}
-                      fontSize="10"
+                      fontSize="11"
                       fill="#1e293b"
                       fontFamily="monospace"
                       fontWeight="bold"

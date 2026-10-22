@@ -885,3 +885,307 @@ export function solveCompletingTheSquare(a: number, b: number, c: number): Compl
     vertexFormLatex,
   };
 }
+
+
+/**
+ * Long Division Step structure for classic US long division visualization
+ */
+export interface LongDivisionStep {
+  stepNumber: number;
+  quotientTermLatex: string;
+  currentWorkingPolyLatex: string;
+  multipliedDivisorLatex: string;
+  resultingRemainderLatex: string;
+  explanation: string;
+}
+
+export interface PolynomialLongDivisionResult {
+  dividendPoly: Polynomial;
+  divisorPoly: Polynomial;
+  quotientPoly: Polynomial;
+  remainder: number;
+  steps: LongDivisionStep[];
+  asciiTable: string;
+}
+
+export function performPolynomialLongDivision(
+  dividend: Polynomial,
+  divisor: DivisorInfo
+): PolynomialLongDivisionResult {
+  const divCoeffs = [divisor.a, -divisor.b]; // ax + (-b) where b = -constant
+  const divisorPoly: Polynomial = {
+    coefficients: [divisor.a, -divisor.b],
+    degree: 1,
+    variable: dividend.variable,
+  };
+
+  const steps: LongDivisionStep[] = [];
+  let workingCoeffs = [...dividend.coefficients];
+  const quotientCoeffs: number[] = [];
+
+  const degDiff = dividend.degree - 1;
+  const v = dividend.variable;
+
+  for (let i = 0; i <= degDiff; i++) {
+    const leadWorking = workingCoeffs[0];
+    const leadDivisor = divisor.a;
+    const qCoeff = leadWorking / leadDivisor;
+    quotientCoeffs.push(qCoeff);
+
+    const currentPower = dividend.degree - i;
+    const qPower = currentPower - 1;
+
+    const qTermLatex = qPower === 0
+      ? `${qCoeff}`
+      : qPower === 1
+      ? `${qCoeff === 1 ? '' : qCoeff === -1 ? '-' : qCoeff}${v}`
+      : `${qCoeff === 1 ? '' : qCoeff === -1 ? '-' : qCoeff}${v}^{${qPower}}`;
+
+    // Multiplied by divisor: qCoeff * (a * x + (-b))
+    const multLead = qCoeff * divisor.a; // equals leadWorking
+    const multSecond = qCoeff * (-divisor.b);
+
+    // Subtract: workingCoeffs[0] cancels out
+    const nextWorking: number[] = [];
+    const diffSecond = (workingCoeffs[1] || 0) - multSecond;
+    nextWorking.push(diffSecond);
+    for (let j = 2; j < workingCoeffs.length; j++) {
+      nextWorking.push(workingCoeffs[j]);
+    }
+
+    const currentWorkingPoly: Polynomial = {
+      coefficients: workingCoeffs,
+      degree: currentPower,
+      variable: v,
+    };
+
+    const multipliedPoly: Polynomial = {
+      coefficients: [multLead, multSecond],
+      degree: currentPower,
+      variable: v,
+    };
+
+    const resultingPoly: Polynomial = {
+      coefficients: nextWorking,
+      degree: currentPower - 1,
+      variable: v,
+    };
+
+    steps.push({
+      stepNumber: i + 1,
+      quotientTermLatex: qTermLatex,
+      currentWorkingPolyLatex: formatPolynomialLatex(currentWorkingPoly),
+      multipliedDivisorLatex: formatPolynomialLatex(multipliedPoly),
+      resultingRemainderLatex: formatPolynomialLatex(resultingPoly),
+      explanation: `Divide leading term ${leadWorking}${v}^${currentPower} by ${divisor.a}${v} to get quotient term ${qTermLatex}. Multiply by divisor and subtract.`,
+    });
+
+    workingCoeffs = nextWorking;
+  }
+
+  const remainder = workingCoeffs[0] || 0;
+  const quotientPoly: Polynomial = {
+    coefficients: quotientCoeffs,
+    degree: Math.max(0, dividend.degree - 1),
+    variable: v,
+  };
+
+  return {
+    dividendPoly: dividend,
+    divisorPoly,
+    quotientPoly,
+    remainder,
+    steps,
+    asciiTable: "",
+  };
+}
+
+/**
+ * Full polynomial factorization helper using Rational Root Theorem and synthetic deflation
+ */
+export interface CompleteFactorizationResult {
+  roots: { value: number; display: string; multiplicity: number }[];
+  linearFactorsLatex: string;
+  hasComplexRoots: boolean;
+  notes: string;
+}
+
+export function findFullPolynomialFactorization(poly: Polynomial): CompleteFactorizationResult {
+  if (poly.degree < 1) {
+    return {
+      roots: [],
+      linearFactorsLatex: formatPolynomialLatex(poly),
+      hasComplexRoots: false,
+      notes: "Constant polynomial has no roots.",
+    };
+  }
+
+  const v = poly.variable;
+  const leading = poly.coefficients[0];
+  const rootsFound: { value: number; display: string; multiplicity: number }[] = [];
+  let currentCoeffs = [...poly.coefficients];
+  let currentDegree = poly.degree;
+
+  // Find rational roots sequentially
+  let iterations = 0;
+  while (currentDegree > 2 && iterations < 10) {
+    iterations++;
+    const currentPoly: Polynomial = {
+      coefficients: currentCoeffs,
+      degree: currentDegree,
+      variable: v,
+    };
+    const candResult = computeRationalRootCandidates(currentPoly);
+    const confirmed = candResult.candidates.find((c) => c.isRoot);
+    if (!confirmed) break;
+
+    // Deflate with synthetic division
+    const rootVal = confirmed.value;
+    const deflatedCoeffs: number[] = [currentCoeffs[0]];
+    for (let i = 1; i < currentCoeffs.length - 1; i++) {
+      deflatedCoeffs.push(currentCoeffs[i] + deflatedCoeffs[i - 1] * rootVal);
+    }
+
+    const existing = rootsFound.find((r) => Math.abs(r.value - rootVal) < 1e-6);
+    if (existing) {
+      existing.multiplicity++;
+    } else {
+      rootsFound.push({
+        value: rootVal,
+        display: confirmed.display,
+        multiplicity: 1,
+      });
+    }
+
+    currentCoeffs = deflatedCoeffs;
+    currentDegree--;
+  }
+
+  let hasComplex = false;
+  // If current degree is 2, solve using quadratic formula
+  if (currentDegree === 2) {
+    const [qa, qb, qc] = currentCoeffs;
+    const disc = qb * qb - 4 * qa * qc;
+    if (disc >= 0) {
+      const r1 = (-qb + Math.sqrt(disc)) / (2 * qa);
+      const r2 = (-qb - Math.sqrt(disc)) / (2 * qa);
+      const frac1 = createFraction(r1);
+      const frac2 = createFraction(r2);
+
+      const f1Display = formatFraction(frac1);
+      const f2Display = formatFraction(frac2);
+
+      const e1 = rootsFound.find((r) => Math.abs(r.value - r1) < 1e-6);
+      if (e1) e1.multiplicity++;
+      else rootsFound.push({ value: r1, display: f1Display, multiplicity: 1 });
+
+      const e2 = rootsFound.find((r) => Math.abs(r.value - r2) < 1e-6);
+      if (e2) e2.multiplicity++;
+      else rootsFound.push({ value: r2, display: f2Display, multiplicity: 1 });
+    } else {
+      hasComplex = true;
+    }
+  }
+
+  // Build factored LaTeX string
+  const leadStr = leading === 1 ? "" : leading === -1 ? "-" : `${leading}`;
+  const factorTerms: string[] = [];
+
+  for (const r of rootsFound) {
+    const frac = createFraction(r.value);
+    let term = "";
+    if (frac.d === 1) {
+      if (r.value === 0) term = `${v}`;
+      else if (r.value > 0) term = `(${v} - ${r.value})`;
+      else term = `(${v} + ${Math.abs(r.value)})`;
+    } else {
+      // (dx - n)
+      const n = frac.n;
+      const d = frac.d;
+      term = n > 0 ? `(${d}${v} - ${n})` : `(${d}${v} + ${Math.abs(n)})`;
+    }
+
+    if (r.multiplicity > 1) {
+      term = `${term}^{${r.multiplicity}}`;
+    }
+    factorTerms.push(term);
+  }
+
+  let linearFactorsLatex = `${leadStr}${factorTerms.join('')}`;
+  if (factorTerms.length === 0) {
+    linearFactorsLatex = formatPolynomialLatex(poly);
+  }
+
+  return {
+    roots: rootsFound,
+    linearFactorsLatex,
+    hasComplexRoots: hasComplex,
+    notes: hasComplex ? "Contains complex (non-real) roots." : "All roots are real rational numbers.",
+  };
+}
+
+/**
+ * Parse an equation string like "x^2 + 6x + 5 = 0" or "2x^2 - 4x = 10" into a, b, c
+ */
+export function parseQuadraticEquationString(input: string): { a: number; b: number; c: number; error: string | null } {
+  try {
+    let clean = input.trim().replace(/\s+/g, '');
+    if (!clean) return { a: 1, b: 0, c: 0, error: "Please enter an equation" };
+
+    let lhs = clean;
+    let rhs = "0";
+
+    if (clean.includes('=')) {
+      const parts = clean.split('=');
+      lhs = parts[0];
+      rhs = parts[1] || "0";
+    }
+
+    // Parse lhs
+    const pLhs = parsePolynomial(lhs);
+    if (pLhs.error) return { a: 1, b: 0, c: 0, error: pLhs.error };
+
+    let rhsVal = 0;
+    if (rhs && rhs !== '0') {
+      const pRhs = parsePolynomial(rhs);
+      if (pRhs.error) return { a: 1, b: 0, c: 0, error: `Invalid right side: ${pRhs.error}` };
+      // Subtract rhs terms from lhs
+      const maxD = Math.max(pLhs.poly!.degree, pRhs.poly!.degree);
+      if (maxD > 2) {
+        return { a: 1, b: 0, c: 0, error: "Equation degree must be quadratic (maximum power 2)" };
+      }
+    }
+
+    const poly = pLhs.poly!;
+    if (poly.degree > 2) {
+      return { a: 1, b: 0, c: 0, error: "Completing the square applies to quadratic equations (degree 2)" };
+    }
+
+    let a = 0;
+    let b = 0;
+    let c = 0;
+
+    for (let i = 0; i < poly.coefficients.length; i++) {
+      const p = poly.degree - i;
+      if (p === 2) a = poly.coefficients[i];
+      else if (p === 1) b = poly.coefficients[i];
+      else if (p === 0) c = poly.coefficients[i];
+    }
+
+    // Subtract rhs if constant
+    if (rhs && rhs !== '0') {
+      const rNum = parseFloat(rhs);
+      if (!isNaN(rNum)) {
+        c -= rNum;
+      }
+    }
+
+    if (Math.abs(a) < 1e-9) {
+      return { a: 1, b: 0, c: 0, error: "Not a quadratic equation (coefficient of x² is 0)" };
+    }
+
+    return { a, b, c, error: null };
+  } catch {
+    return { a: 1, b: 0, c: 0, error: "Failed to parse quadratic equation" };
+  }
+}
