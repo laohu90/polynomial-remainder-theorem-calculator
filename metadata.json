@@ -1,0 +1,8 @@
+{
+  "name": "Polynomial Remainder Theorem Calculator",
+  "description": "Free step-by-step Polynomial Remainder Theorem & Factor Theorem Calculator. Includes synthetic division table, rational root tester, and completing the square steps for Algebra 2 students.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
