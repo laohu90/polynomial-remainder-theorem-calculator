@@ -50,6 +50,7 @@ export const RemainderCalculator: React.FC<RemainderCalculatorProps> = ({
   const [copiedLatex, setCopiedLatex] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [activeViewMode, setActiveViewMode] = useState<'all' | 'direct' | 'synthetic' | 'longDivision'>('all');
+  const [showKeypad, setShowKeypad] = useState<boolean>(false);
 
   // Sync with URL params on first mount if present
   useEffect(() => {
@@ -170,76 +171,50 @@ ${synthResult!.summaryIdentityLatex}`;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-xs">
-      {/* Headings */}
-      <div className="max-w-3xl mb-6">
-        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-          {t.calcHeading}
-        </h2>
-        <p className="text-base sm:text-lg text-slate-600 mt-1 leading-relaxed">
-          {t.calcSubheading}
-        </p>
-      </div>
-
-      {/* Preset Row */}
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">
-          {t.examplesTitle}:
-        </span>
-        {presets.map((p, idx) => (
-          <button
-            key={idx}
-            onClick={() => handleApplyPreset(p)}
-            className="text-xs font-medium px-3 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 rounded-md transition-colors border border-slate-200"
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Input Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        {/* Dividend P(x) */}
-        <div className="md:col-span-2">
-          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-            {t.polyInputLabel}
-          </label>
-          <input
-            type="text"
-            value={polyInput}
-            onChange={(e) => setPolyInput(e.target.value)}
-            placeholder={t.polyInputPlaceholder}
-            className="w-full px-4 py-3 text-base sm:text-lg font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
-          />
+      {/* Collapsible Presets & Keypad Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            {t.examplesTitle}
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {presets.slice(0, 3).map((p, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleApplyPreset(p)}
+                className="text-xs font-medium px-2.5 py-1 bg-white hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 rounded-md transition-colors border border-slate-200 shadow-2xs"
+              >
+                {p.label.split('(')[0].trim()}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Divisor D(x) */}
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-            {t.divisorInputLabel}
-          </label>
-          <input
-            type="text"
-            value={divisorInput}
-            onChange={(e) => setDivisorInput(e.target.value)}
-            placeholder={t.divisorInputPlaceholder}
-            className="w-full px-4 py-3 text-base sm:text-lg font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
-          />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowKeypad(!showKeypad)}
+            className="text-xs font-semibold px-3 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-md transition-colors shadow-2xs"
+          >
+            {showKeypad ? 'Hide Keypad' : '+ Math Keypad'}
+          </button>
         </div>
       </div>
 
-      {/* Quick Math Symbols */}
-      <div className="mb-6 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-        <span className="font-semibold text-slate-600 mr-1">{t.keypadTitle}:</span>
-        {keypadTokens.map((tok, idx) => (
-          <button
-            key={idx}
-            onClick={() => handleKeypadInsert(tok)}
-            className="px-2.5 py-1 font-mono font-medium bg-slate-50 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded transition-colors"
-          >
-            {tok}
-          </button>
-        ))}
-      </div>
+      {/* Quick Math Symbols (Collapsible) */}
+      {showKeypad && (
+        <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center gap-2 text-xs text-slate-600 animate-fadeIn">
+          <span className="font-semibold text-slate-700 mr-2">{t.keypadTitle}:</span>
+          {keypadTokens.map((tok, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleKeypadInsert(tok)}
+              className="px-3 py-1.5 font-mono font-medium bg-white hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 border border-slate-200 rounded-md transition-colors shadow-2xs"
+            >
+              {tok}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Error State */}
       {parsed.error && (

@@ -82,35 +82,16 @@ export default function App() {
 
       {/* Main Content Container */}
       <main className="grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        {/* Hero Value Kicker */}
-        <div className="mb-8 text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-3 py-1 rounded-full mb-3 shadow-2xs">
-            <Zap className="w-3.5 h-3.5 text-indigo-600" />
-            <span>{t.heroBadge}</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 text-balance mb-3">
+        {/* Hero Section - Clean & Minimalist */}
+        <div className="mb-6 text-center max-w-2xl mx-auto">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 mb-2">
             {activeTab === 'remainder' && t.appName}
             {activeTab === 'completing' && t.ctsHeading}
             {activeTab === 'practice' && t.practiceHeading}
           </h1>
-
-          <p className="text-base sm:text-lg text-slate-600 leading-relaxed text-balance">
+          <p className="text-sm sm:text-base text-slate-600">
             {t.appTagline}
           </p>
-
-          {/* Value proposition badges */}
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mt-4 text-xs sm:text-sm text-slate-600 font-medium">
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> {t.heroFeature1}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> {t.heroFeature2}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> {t.heroFeature3}
-            </span>
-          </div>
         </div>
 
         {/* Tab Switcher - Segmented Control */}

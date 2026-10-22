@@ -134,15 +134,6 @@ Roots: x1 = ${res.roots.root1Str}, x2 = ${res.roots.root2Str}`;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-xs">
-      <div className="max-w-3xl mb-6">
-        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-          {t.ctsHeading}
-        </h2>
-        <p className="text-base sm:text-lg text-slate-600 mt-1 leading-relaxed">
-          {t.ctsSubheading}
-        </p>
-      </div>
-
       {/* Preset Buttons */}
       <div className="mb-6">
         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">
