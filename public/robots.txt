@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://polynomial-remainder-theorem-calculator.org/sitemap.xml
+Sitemap: https://polynomial-remainder-theorem-calculator.formulacalckit.com/sitemap.xml
