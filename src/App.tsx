@@ -19,7 +19,7 @@ export default function App() {
     try {
       const urlParams = new URLSearchParams(window.location.search);
       const urlLang = urlParams.get('lang');
-      const supportedLangs: Language[] = ['zh', 'en', 'es', 'fr', 'pt', 'de', 'ja'];
+      const supportedLangs: Language[] = ['en', 'zh', 'es', 'fr', 'pt', 'de', 'ja'];
       if (urlLang && supportedLangs.includes(urlLang as Language)) {
         return urlLang as Language;
       }
@@ -27,19 +27,10 @@ export default function App() {
       if (saved && supportedLangs.includes(saved as Language)) {
         return saved as Language;
       }
-
-      // Auto-detect browser language if specific
-      const browserLang = navigator.language?.toLowerCase() || '';
-      if (browserLang.startsWith('zh')) return 'zh';
-      if (browserLang.startsWith('es')) return 'es';
-      if (browserLang.startsWith('fr')) return 'fr';
-      if (browserLang.startsWith('pt')) return 'pt';
-      if (browserLang.startsWith('de')) return 'de';
-      if (browserLang.startsWith('ja')) return 'ja';
     } catch {
       // ignore
     }
-    return 'en'; // Default to English
+    return 'en'; // Default to English for all users
   });
 
   const [activeTab, setActiveTab] = useState<'calculator' | 'factor' | 'graph' | 'quiz' | 'guide'>('calculator');
