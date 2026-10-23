@@ -22,6 +22,9 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
     { code: 'en', label: 'English' },
     { code: 'es', label: 'Español' },
     { code: 'fr', label: 'Français' },
+    { code: 'pt', label: 'Português' },
+    { code: 'de', label: 'Deutsch' },
+    { code: 'ja', label: '日本語' },
   ];
 
   const navItems = [
@@ -80,13 +83,13 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
 
           {/* Language Switcher */}
           <div className="flex items-center gap-2">
-            <div className="relative flex items-center bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 transition-colors">
-              <Globe className="w-3.5 h-3.5 text-slate-500 mr-1.5" />
+            <div className="relative flex items-center bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 transition-colors">
+              <Globe className="w-4 h-4 text-indigo-600 mr-1.5 shrink-0" />
               <select
                 value={currentLang}
                 onChange={(e) => onSelectLang(e.target.value as Language)}
                 aria-label="Select Language"
-                className="bg-transparent border-none outline-none font-medium text-slate-800 cursor-pointer pr-1"
+                className="bg-transparent border-none outline-none font-semibold text-slate-800 cursor-pointer pr-1"
               >
                 {languages.map((l) => (
                   <option key={l.code} value={l.code}>

@@ -53,29 +53,27 @@ export const ResultsHeroCard: React.FC<ResultsHeroCardProps> = ({
 
   const generateStepByStepText = () => {
     if (divisor.isLinear) {
-      return `【多项式余数定理计算结果】
-被除式 P(x) = ${formatPolynomialLatex(poly)}
-除式 D(x) = ${divisor.divisorString} (根 c = ${divisor.c})
+      return `[${t.appName}]
+P(x) = ${formatPolynomialLatex(poly)}
+D(x) = ${divisor.divisorString} (c = ${divisor.c})
 
-1. 余数定理直接求值 P(c)：
-P(${divisor.c}) = ${remResult.directSubstitutionLatex}
+1. P(c) = ${remResult.directSubstitutionLatex}
 = ${remResult.expandedCalculationLatex}
 = ${remainderVal}
 
-2. 因式定理判定：
-${isFactor ? '余数 R = 0，因此 (x - c) 是 P(x) 的因式。' : '余数 R ≠ 0，因此 (x - c) 不是 P(x) 的因式。'}
+2. ${t.factorVerdict}: ${isFactor ? t.isFactorYes : t.isFactorNo}
 
-3. 除法恒等式：
+3. ${t.divisionIdentity}:
 ${synthResult.summaryIdentityLatex}
-商式 Q(x) = ${formatPolynomialLatex(synthResult.quotientPoly)}
-余数 R = ${remainderVal}`;
+Q(x) = ${formatPolynomialLatex(synthResult.quotientPoly)}
+R = ${remainderVal}`;
     } else {
-      return `【多项式长除法计算结果】
-被除式 P(x) = ${formatPolynomialLatex(poly)}
-除式 D(x) = ${divisor.divisorString}
-商式 Q(x) = ${formatPolynomialLatex(longDivResult.quotientPoly)}
-余式 R(x) = ${formatPolynomialLatex(longDivResult.remainderPoly)}
-除法恒等式：${longDivResult.identityLatex}`;
+      return `[${t.appName}]
+P(x) = ${formatPolynomialLatex(poly)}
+D(x) = ${divisor.divisorString}
+Q(x) = ${formatPolynomialLatex(longDivResult.quotientPoly)}
+R(x) = ${formatPolynomialLatex(longDivResult.remainderPoly)}
+${t.divisionIdentity}: ${longDivResult.identityLatex}`;
     }
   };
 
@@ -158,7 +156,7 @@ ${synthResult.summaryIdentityLatex}
             </span>
           </div>
           <span className="text-xs text-slate-300">
-            {divisor.isLinear ? `P(c = ${divisor.c})` : '多项式除法余数'}
+            {divisor.isLinear ? `P(c = ${divisor.c})` : t.polyDivRemainder}
           </span>
         </div>
 
@@ -182,7 +180,7 @@ ${synthResult.summaryIdentityLatex}
             </span>
           </div>
           <span className="text-xs opacity-75">
-            {isFactor ? '(x - c) 整除多项式' : '存在非零余数'}
+            {isFactor ? t.dividesPolynomial : t.hasRemainder}
           </span>
         </div>
 
@@ -195,7 +193,7 @@ ${synthResult.summaryIdentityLatex}
             <MathView math={`Q(x) = ${quotientLatex}`} />
           </div>
           <span className="text-xs text-slate-300">
-            次数 deg(Q) = {poly.degree - (divisor.rawPoly?.degree || 1)}
+            {t.quotientDegree} = {poly.degree - (divisor.rawPoly?.degree || 1)}
           </span>
         </div>
       </div>

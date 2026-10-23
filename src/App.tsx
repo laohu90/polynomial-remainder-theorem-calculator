@@ -19,24 +19,35 @@ export default function App() {
     try {
       const urlParams = new URLSearchParams(window.location.search);
       const urlLang = urlParams.get('lang');
-      if (urlLang && ['zh', 'en', 'es', 'fr'].includes(urlLang)) {
+      const supportedLangs: Language[] = ['zh', 'en', 'es', 'fr', 'pt', 'de', 'ja'];
+      if (urlLang && supportedLangs.includes(urlLang as Language)) {
         return urlLang as Language;
       }
       const saved = localStorage.getItem('remainder_calc_lang');
-      if (saved && ['zh', 'en', 'es', 'fr'].includes(saved)) {
+      if (saved && supportedLangs.includes(saved as Language)) {
         return saved as Language;
       }
+
+      // Auto-detect browser language
+      const browserLang = navigator.language?.toLowerCase() || '';
+      if (browserLang.startsWith('en')) return 'en';
+      if (browserLang.startsWith('es')) return 'es';
+      if (browserLang.startsWith('fr')) return 'fr';
+      if (browserLang.startsWith('pt')) return 'pt';
+      if (browserLang.startsWith('de')) return 'de';
+      if (browserLang.startsWith('ja')) return 'ja';
+      if (browserLang.startsWith('zh')) return 'zh';
     } catch {
       // ignore
     }
-    return 'zh'; // Default to Chinese as requested by user
+    return 'zh'; // Default
   });
 
   const [activeTab, setActiveTab] = useState<'calculator' | 'factor' | 'graph' | 'quiz' | 'guide'>('calculator');
   const [currentPolyStr, setCurrentPolyStr] = useState<string>('2x^3 - 4x^2 + 3x - 5');
   const [currentDivisorStr, setCurrentDivisorStr] = useState<string>('x - 2');
 
-  const t = translations[lang];
+  const t = translations[lang] || translations.zh;
 
   useEffect(() => {
     try {
@@ -119,7 +130,7 @@ export default function App() {
               />
             ) : (
               <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-600">
-                请先在“余数与除法计算”标签页中输入有效多项式。
+                {t.enterPolyPrompt}
               </div>
             )
           )}
@@ -133,7 +144,7 @@ export default function App() {
               />
             ) : (
               <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-600">
-                请先在“余数与除法计算”标签页中输入有效多项式。
+                {t.enterPolyPrompt}
               </div>
             )
           )}

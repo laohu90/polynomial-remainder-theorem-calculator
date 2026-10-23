@@ -23,7 +23,6 @@ import {
   Sparkles,
   AlertCircle,
   TrendingUp,
-  LayoutGrid,
 } from 'lucide-react';
 
 interface RemainderCalculatorProps {
@@ -118,10 +117,10 @@ export const RemainderCalculator: React.FC<RemainderCalculatorProps> = ({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                多项式与除式输入
+                {t.inputSectionTitle}
               </h2>
               <p className="text-xs text-slate-500">
-                输入待计算的多项式和除式，支持分数、括号、负数与缺项
+                {t.inputSectionDesc}
               </p>
             </div>
           </div>
@@ -134,7 +133,7 @@ export const RemainderCalculator: React.FC<RemainderCalculatorProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>重置为默认</span>
+            <span>{t.resetDefault}</span>
           </button>
         </div>
 
@@ -157,7 +156,7 @@ export const RemainderCalculator: React.FC<RemainderCalculatorProps> = ({
 
             {/* Quick Virtual Keypad */}
             <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
-              <span className="text-[11px] text-slate-400 mr-1 select-none font-medium">快速插入:</span>
+              <span className="text-[11px] text-slate-400 mr-1 select-none font-medium">{t.quickInsert}</span>
               {keypadTokens.map((token) => (
                 <button
                   key={token}
@@ -183,7 +182,7 @@ export const RemainderCalculator: React.FC<RemainderCalculatorProps> = ({
               className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-sm sm:text-base focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400"
             />
             <p className="text-[11px] text-slate-400 mt-2">
-              可输入如 <code className="text-slate-600 font-mono">x - 2</code>、<code className="text-slate-600 font-mono">2x - 1</code> 或直接填根 <code className="text-slate-600 font-mono">2</code>
+              {t.divisorHelp}
             </p>
           </div>
         </div>
@@ -212,7 +211,7 @@ export const RemainderCalculator: React.FC<RemainderCalculatorProps> = ({
           <div className="mt-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 text-xs sm:text-sm flex items-start gap-2.5">
             <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold">输入格式提示</p>
+              <p className="font-bold">{t.formatNotice}</p>
               <p className="mt-0.5 text-rose-700">{parsedData.error}</p>
             </div>
           </div>
@@ -314,7 +313,7 @@ export const RemainderCalculator: React.FC<RemainderCalculatorProps> = ({
                 }`}
               >
                 <TrendingUp className="w-3.5 h-3.5" />
-                <span>{showCurve ? '隐藏几何曲线' : '查看几何曲线'}</span>
+                <span>{showCurve ? t.hideCurve : t.showCurve}</span>
               </button>
             )}
           </div>
