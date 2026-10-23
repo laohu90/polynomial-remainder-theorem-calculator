@@ -1,214 +1,259 @@
 import React, { useState } from 'react';
 import { Translations } from '../utils/i18n';
-import { parsePolynomial, parseDivisor, evaluateRemainderTheorem, performSyntheticDivision } from '../utils/mathEngine';
 import { MathView } from './MathView';
-import { CheckCircle2, XCircle, ChevronRight, HelpCircle, Sparkles } from 'lucide-react';
-import { SyntheticDivisionTable } from './SyntheticDivisionTable';
-
-interface PracticeProblem {
-  id: number;
-  polyStr: string;
-  divisorStr: string;
-  questionText: string;
-  correctRemainder: number;
-  isFactor: boolean;
-}
+import { CheckCircle2, XCircle, ArrowRight, RotateCcw, Trophy, Sparkles } from 'lucide-react';
 
 interface PracticeQuizSectionProps {
   t: Translations;
+  onApplyProblemToCalculator: (poly: string, divisor: string) => void;
 }
 
-export const PracticeQuizSection: React.FC<PracticeQuizSectionProps> = ({ t }) => {
-  const practiceSet: PracticeProblem[] = [
+interface QuizItem {
+  id: number;
+  question: string;
+  poly: string;
+  divisor: string;
+  mathDisplay: string;
+  options: { label: string; value: string; isCorrect: boolean }[];
+  explanation: string;
+}
+
+export const PracticeQuizSection: React.FC<PracticeQuizSectionProps> = ({
+  t,
+  onApplyProblemToCalculator,
+}) => {
+  const quizList: QuizItem[] = [
     {
       id: 1,
-      polyStr: "2x^3 - 4x^2 + 3x - 5",
-      divisorStr: "x - 2",
-      questionText: t.quizQ1,
-      correctRemainder: 1,
-      isFactor: false,
+      question: "计算多项式 P(x) = 2x³ - 5x² + x - 2 除以 (x - 2) 的余数 R 是多少？",
+      poly: "2x^3 - 5x^2 + x - 2",
+      divisor: "x - 2",
+      mathDisplay: "P(x) = 2x^3 - 5x^2 + x - 2, \\quad D(x) = x - 2",
+      options: [
+        { label: "R = -4", value: "-4", isCorrect: true },
+        { label: "R = 0", value: "0", isCorrect: false },
+        { label: "R = 2", value: "2", isCorrect: false },
+        { label: "R = 4", value: "4", isCorrect: false },
+      ],
+      explanation: "代入余数定理：c = 2，P(2) = 2(2)³ - 5(2)² + (2) - 2 = 16 - 20 + 2 - 2 = -4。",
     },
     {
       id: 2,
-      polyStr: "x^3 - 3x^2 - 4x + 12",
-      divisorStr: "x - 3",
-      questionText: t.quizQ2,
-      correctRemainder: 0,
-      isFactor: true,
+      question: "已知多项式 P(x) = x³ - 4x² + kx - 6 能被 (x - 3) 整除，则常数 k 的值为？",
+      poly: "x^3 - 4x^2 + 5x - 6",
+      divisor: "x - 3",
+      mathDisplay: "P(3) = 0 \\implies 3^3 - 4(3)^2 + 3k - 6 = 0",
+      options: [
+        { label: "k = 5", value: "5", isCorrect: true },
+        { label: "k = -5", value: "-5", isCorrect: false },
+        { label: "k = 3", value: "3", isCorrect: false },
+        { label: "k = 15", value: "15", isCorrect: false },
+      ],
+      explanation: "由因式定理，P(3) = 0：27 - 36 + 3k - 6 = 0 => 3k - 15 = 0 => k = 5。",
     },
     {
       id: 3,
-      polyStr: "x^4 - 16",
-      divisorStr: "x + 2",
-      questionText: t.quizQ3,
-      correctRemainder: 0,
-      isFactor: true,
+      question: "对多项式 P(x) = 3x³ + 2x² - 7x + 2 使用有理根定理，下列哪个数值不可能是其有理根？",
+      poly: "3x^3 + 2x^2 - 7x + 2",
+      divisor: "x - 1",
+      mathDisplay: "a_0 = 2, \\quad a_n = 3",
+      options: [
+        { label: "x = 4", value: "4", isCorrect: true },
+        { label: "x = 1/3", value: "1/3", isCorrect: false },
+        { label: "x = -2", value: "-2", isCorrect: false },
+        { label: "x = 2/3", value: "2/3", isCorrect: false },
+      ],
+      explanation: "常数项因数 p ∈ {1, 2}，首项因数 q ∈ {1, 3}。候选根 ±(p/q) 包含 ±1, ±2, ±1/3, ±2/3。4 的分子为 4，不是常数项 2 的因数，因此绝不可能是有理根。",
     },
     {
       id: 4,
-      polyStr: "3x^3 + 5x^2 - 11x + 3",
-      divisorStr: "2x - 1",
-      questionText: t.quizQ4,
-      correctRemainder: -0.875,
-      isFactor: false,
-    },
-    {
-      id: 5,
-      polyStr: "x^3 + 2x^2 - 5x - 6",
-      divisorStr: "x + 1",
-      questionText: t.quizQ5,
-      correctRemainder: 0,
-      isFactor: true,
+      question: "多项式 P(x) = x⁴ - 16 除以 (x + 2) 的余数是多少？",
+      poly: "x^4 - 16",
+      divisor: "x + 2",
+      mathDisplay: "P(x) = x^4 - 16, \\quad c = -2",
+      options: [
+        { label: "R = 0 (整除，是因式)", value: "0", isCorrect: true },
+        { label: "R = -32", value: "-32", isCorrect: false },
+        { label: "R = 16", value: "16", isCorrect: false },
+        { label: "R = -16", value: "-16", isCorrect: false },
+      ],
+      explanation: "注意除式是 (x + 2)，其根为 c = -2！P(-2) = (-2)⁴ - 16 = 16 - 16 = 0。余数为 0，说明 (x + 2) 是因式。",
     },
   ];
 
-  const [problemIndex, setProblemIndex] = useState<number>(0);
-  const [userAnswer, setUserAnswer] = useState<string>("");
-  const [submitted, setSubmitted] = useState<boolean>(false);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const [showFullSolution, setShowFullSolution] = useState<boolean>(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
+  const [score, setScore] = useState(0);
 
-  const currentProblem = practiceSet[problemIndex];
+  const currentQ = quizList[currentIndex];
 
-  const handleCheck = () => {
-    const raw = userAnswer.trim();
-    let val = parseFloat(raw);
-    if (raw.includes('/')) {
-      const parts = raw.split('/');
-      if (parts.length === 2) {
-        const num = parseFloat(parts[0]);
-        const den = parseFloat(parts[1]);
-        if (!isNaN(num) && !isNaN(den) && den !== 0) {
-          val = num / den;
-        }
-      }
+  const handleSelectOption = (val: string) => {
+    if (isAnswerSubmitted) return;
+    setSelectedOption(val);
+  };
+
+  const handleSubmit = () => {
+    if (!selectedOption) return;
+    setIsAnswerSubmitted(true);
+    const chosen = currentQ.options.find(o => o.value === selectedOption);
+    if (chosen?.isCorrect) {
+      setScore(prev => prev + 1);
     }
-    if (isNaN(val)) return;
-
-    const correct = Math.abs(val - currentProblem.correctRemainder) < 1e-4;
-    setIsCorrect(correct);
-    setSubmitted(true);
   };
 
   const handleNext = () => {
-    setProblemIndex((prev) => (prev + 1) % practiceSet.length);
-    setUserAnswer("");
-    setSubmitted(false);
-    setIsCorrect(null);
-    setShowFullSolution(false);
+    if (currentIndex < quizList.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+      setSelectedOption(null);
+      setIsAnswerSubmitted(false);
+    }
   };
 
-  // Compute solution for display
-  const polyParsed = parsePolynomial(currentProblem.polyStr).poly;
-  const divisorParsed = parseDivisor(currentProblem.divisorStr).divisor;
-  const remResult = polyParsed && divisorParsed ? evaluateRemainderTheorem(polyParsed, divisorParsed) : null;
-  const synthResult = polyParsed && divisorParsed ? performSyntheticDivision(polyParsed, divisorParsed) : null;
+  const handleRestart = () => {
+    setCurrentIndex(0);
+    setSelectedOption(null);
+    setIsAnswerSubmitted(false);
+    setScore(0);
+  };
+
+  const chosenOption = currentQ.options.find(o => o.value === selectedOption);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-xs">
-      <div className="max-w-3xl mb-6">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900">{t.practiceHeading}</h2>
-        <p className="text-base text-slate-600 mt-1">{t.practiceSubheading}</p>
-      </div>
+    <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs mb-8">
+      {/* Top Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-6 border-b border-slate-200">
+        <div>
+          <h3 className="text-lg sm:text-xl font-bold text-slate-900">
+            {t.quizTitle}
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-500">
+            {t.quizDesc}
+          </p>
+        </div>
 
-      {/* Progress pill */}
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 text-xs font-semibold text-slate-500">
-        <span>{t.practiceProblemN} {problemIndex + 1} {t.synthOf} {practiceSet.length}</span>
-        <span>{t.practiceExamTag}</span>
+        {/* Progress & Score */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-900 border border-amber-200 rounded-lg text-xs font-bold">
+            <Trophy className="w-3.5 h-3.5 text-amber-600" />
+            <span>{t.quizScore} {score} / {quizList.length}</span>
+          </div>
+          <span className="text-xs font-semibold text-slate-500">
+            第 {currentIndex + 1} / {quizList.length} 题
+          </span>
+        </div>
       </div>
 
       {/* Question Card */}
-      <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-5 mb-6">
-        <p className="text-base sm:text-lg font-medium text-slate-900 mb-3 leading-relaxed">
-          {currentProblem.questionText}
-        </p>
-        <div className="flex flex-wrap items-center gap-4 text-sm font-mono text-indigo-900 bg-white p-3 rounded-lg border border-indigo-100">
-          <div><span className="font-sans text-xs text-slate-500 block">{t.polyInputLabel}:</span> {currentProblem.polyStr}</div>
-          <div className="border-l border-slate-200 pl-4"><span className="font-sans text-xs text-slate-500 block">{t.divisorInputLabel}:</span> {currentProblem.divisorStr}</div>
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-6">
+        <div className="text-sm sm:text-base font-semibold text-slate-900 mb-3">
+          {currentQ.question}
+        </div>
+        <div className="bg-white border border-slate-200/80 rounded-lg p-3 text-center font-mono text-base text-indigo-700">
+          <MathView math={currentQ.mathDisplay} />
         </div>
       </div>
 
-      {/* Input & Check */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <div className="relative">
-          <label className="text-xs font-semibold text-slate-700 block mb-1">{t.practiceYourAnswer}</label>
-          <input
-            type="text"
-            value={userAnswer}
-            onChange={(e) => setUserAnswer(e.target.value)}
-            disabled={submitted && isCorrect === true}
-            className="w-48 px-4 py-2.5 text-base font-mono bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder={t.practiceAnswerPlaceholder}
-          />
-        </div>
+      {/* Options */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        {currentQ.options.map((opt, idx) => {
+          const isSelected = selectedOption === opt.value;
+          let btnStyle = "bg-white border-slate-200 text-slate-800 hover:bg-slate-50";
 
-        <button
-          onClick={handleCheck}
-          disabled={!userAnswer.trim()}
-          className="mt-5 px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-40 transition-colors shadow-2xs"
-        >
-          {t.practiceSubmit}
-        </button>
+          if (isAnswerSubmitted) {
+            if (opt.isCorrect) {
+              btnStyle = "bg-emerald-50 border-emerald-400 text-emerald-950 font-bold ring-2 ring-emerald-500/30";
+            } else if (isSelected && !opt.isCorrect) {
+              btnStyle = "bg-rose-50 border-rose-400 text-rose-950 font-bold";
+            } else {
+              btnStyle = "bg-white border-slate-200 text-slate-400 opacity-60";
+            }
+          } else if (isSelected) {
+            btnStyle = "bg-indigo-50 border-indigo-400 text-indigo-950 ring-2 ring-indigo-500/30 font-semibold";
+          }
 
-        <button
-          onClick={handleNext}
-          className="mt-5 flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
-        >
-          <span>{t.practiceNext}</span>
-          <ChevronRight className="w-4 h-4" />
-        </button>
+          return (
+            <button
+              key={idx}
+              onClick={() => handleSelectOption(opt.value)}
+              className={`p-4 rounded-xl border text-left text-sm transition-all flex items-center justify-between ${btnStyle}`}
+            >
+              <span className="font-mono">{opt.label}</span>
+              {isAnswerSubmitted && opt.isCorrect && (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              )}
+              {isAnswerSubmitted && isSelected && !opt.isCorrect && (
+                <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Feedback Alert */}
-      {submitted && (
-        <div
-          className={`p-4 rounded-xl border mb-6 flex items-start gap-3 ${
-            isCorrect
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-              : 'bg-amber-50 border-amber-200 text-amber-900'
-          }`}
-        >
-          {isCorrect ? (
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-          ) : (
-            <XCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          )}
-          <div className="grow">
-            <h4 className="text-sm font-bold">
-              {isCorrect ? t.practiceCorrect : t.practiceIncorrect}
-            </h4>
-            <p className="text-xs mt-1">
-              {t.remainderBadge} = {currentProblem.correctRemainder}.{' '}
-              {currentProblem.isFactor ? t.factorTheoremTrue : t.factorTheoremFalse}
-            </p>
-          </div>
+      {/* Controls & Feedback */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        {!isAnswerSubmitted ? (
           <button
-            onClick={() => setShowFullSolution(!showFullSolution)}
-            className="text-xs font-semibold underline underline-offset-2 hover:opacity-80 shrink-0"
+            onClick={handleSubmit}
+            disabled={!selectedOption}
+            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white font-semibold text-xs sm:text-sm transition-all shadow-xs"
           >
-            {showFullSolution ? t.practiceHideSolution : t.practiceShowSolution}
+            {t.quizSubmit}
           </button>
-        </div>
-      )}
+        ) : (
+          <div className="flex items-center gap-3">
+            {currentIndex < quizList.length - 1 ? (
+              <button
+                onClick={handleNext}
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm transition-all shadow-xs"
+              >
+                <span>{t.quizNext}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                onClick={handleRestart}
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm transition-all shadow-xs"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>重新测试</span>
+              </button>
+            )}
 
-      {/* Full Solution Breakdown (if toggled) */}
-      {showFullSolution && remResult && synthResult && (
-        <div className="mt-4 pt-4 border-t border-slate-200">
-          <h4 className="text-base font-bold text-slate-900 mb-2">{t.stepByStepProof}</h4>
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-            <div>
-              <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider block mb-1">
-                {t.directEvaluation} P({remResult.c}):
-              </span>
-              <MathView
-                math={`P(${remResult.c}) = ${remResult.directSubstitutionLatex} = ${remResult.expandedCalculationLatex} = ${remResult.remainder}`}
-                block={true}
-                className="text-base text-slate-900"
-              />
-            </div>
-
-            <SyntheticDivisionTable result={synthResult} t={t} />
+            <button
+              onClick={() => onApplyProblemToCalculator(currentQ.poly, currentQ.divisor)}
+              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition-all border border-slate-200 flex items-center gap-1"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+              <span>载入计算器验证</span>
+            </button>
           </div>
+        )}
+
+        {isAnswerSubmitted && (
+          <div className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
+            {chosenOption?.isCorrect ? (
+              <span className="text-emerald-700 flex items-center gap-1">
+                <CheckCircle2 className="w-4 h-4" />
+                {t.quizCorrect}
+              </span>
+            ) : (
+              <span className="text-rose-700 flex items-center gap-1">
+                <XCircle className="w-4 h-4" />
+                {t.quizIncorrect}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Explanation Box */}
+      {isAnswerSubmitted && (
+        <div className="mt-5 p-4 rounded-xl bg-indigo-50/70 border border-indigo-200/80 text-xs sm:text-sm text-indigo-950 leading-relaxed">
+          <div className="font-bold text-indigo-900 mb-1 flex items-center gap-1.5">
+            <span>{t.quizExplanation}</span>
+          </div>
+          <p>{currentQ.explanation}</p>
         </div>
       )}
     </div>

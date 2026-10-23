@@ -1,36 +1,29 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Translations } from '../utils/i18n';
 import {
   parsePolynomial,
   parseDivisor,
   evaluateRemainderTheorem,
   performSyntheticDivision,
   performPolynomialLongDivision,
-  findFullPolynomialFactorization,
-  formatPolynomial,
-  formatPolynomialLatex,
   Polynomial,
   DivisorInfo,
   RemainderTheoremResult,
   SyntheticDivisionResult,
-  solveCompletingTheSquare,
+  PolynomialLongDivisionResult,
 } from '../utils/mathEngine';
-import { Translations } from '../utils/i18n';
-import { MathView } from './MathView';
-import { SyntheticDivisionTable } from './SyntheticDivisionTable';
-import { PolynomialLongDivisionView } from './PolynomialLongDivisionView';
-import { RationalRootsGrid } from './RationalRootsGrid';
+import { ResultsHeroCard } from './ResultsHeroCard';
+import { DirectEvaluationCard } from './DirectEvaluationCard';
+import { SyntheticDivisionCard } from './SyntheticDivisionCard';
+import { LongDivisionCard } from './LongDivisionCard';
+import { PolynomialCurveVisualizer } from './PolynomialCurveVisualizer';
 import {
-  CheckCircle2,
-  AlertCircle,
-  Copy,
-  Check,
-  Share2,
-  Printer,
+  Calculator,
+  RotateCcw,
   Sparkles,
-  ArrowRight,
-  Code,
-  Divide,
-  BookOpen,
+  AlertCircle,
+  TrendingUp,
+  LayoutGrid,
 } from 'lucide-react';
 
 interface RemainderCalculatorProps {
@@ -46,13 +39,10 @@ export const RemainderCalculator: React.FC<RemainderCalculatorProps> = ({
 }) => {
   const [polyInput, setPolyInput] = useState<string>(initialPoly);
   const [divisorInput, setDivisorInput] = useState<string>(initialDivisor);
-  const [copiedSteps, setCopiedSteps] = useState<boolean>(false);
-  const [copiedLatex, setCopiedLatex] = useState<boolean>(false);
-  const [copiedLink, setCopiedLink] = useState<boolean>(false);
-  const [activeViewMode, setActiveViewMode] = useState<'all' | 'direct' | 'synthetic' | 'longDivision'>('all');
-  const [showKeypad, setShowKeypad] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'all' | 'direct' | 'synthetic' | 'longDivision'>('all');
+  const [showCurve, setShowCurve] = useState<boolean>(true);
 
-  // Sync with URL params on first mount if present
+  // Sync with URL query params if present
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -66,11 +56,13 @@ export const RemainderCalculator: React.FC<RemainderCalculatorProps> = ({
   }, []);
 
   const presets = [
-    { label: t.example1, poly: '2x^3 - 4x^2 + 3x - 5', divisor: 'x - 2' },
-    { label: t.example2, poly: 'x^3 - 3x^2 - 4x + 12', divisor: 'x - 3' },
-    { label: t.example3, poly: '3x^3 + 5x^2 - 11x + 3', divisor: '2x - 1' },
-    { label: t.example4, poly: 'x^3 - 8', divisor: 'x - 2' },
-    { label: t.example5, poly: 'x^4 - 5x^2 + 4', divisor: 'x - 1' },
+    { label: t.presetStandard, poly: '2x^3 - 4x^2 + 3x - 5', divisor: 'x - 2' },
+    { label: t.presetFactor, poly: 'x^3 - 3x^2 - 4x + 12', divisor: 'x - 3' },
+    { label: t.presetFraction, poly: '2x^3 + 3x^2 - 8x + 3', divisor: '2x - 1' },
+    { label: t.presetMissingTerm, poly: 'x^3 - 8', divisor: 'x - 2' },
+    { label: t.presetQuartic, poly: 'x^4 - 5x^2 + 4', divisor: 'x - 1' },
+    { label: t.presetNegativeRoot, poly: '3x^3 + 7x^2 - 2x - 4', divisor: 'x + 2' },
+    { label: t.presetQuadDivisor, poly: '2x^4 - x^3 + 3x^2 - 5x + 1', divisor: 'x^2 - x + 1' },
   ];
 
   const handleApplyPreset = (p: typeof presets[0]) => {
@@ -78,386 +70,290 @@ export const RemainderCalculator: React.FC<RemainderCalculatorProps> = ({
     setDivisorInput(p.divisor);
   };
 
-  const keypadTokens = ['x', 'x^2', 'x^3', 'x^4', '+', '-', '/', '^', '(x - 1)', '(x - 2)', '(x + 1)', '(2x - 1)'];
+  const keypadTokens = ['x', 'x^2', 'x^3', 'x^4', '+', '-', '*', '/', '^', '(', ')'];
 
   const handleKeypadInsert = (token: string) => {
-    if (token.startsWith('(x') || token.startsWith('(2x')) {
-      setDivisorInput(token.replace(/[()]/g, ''));
-    } else {
-      setPolyInput((prev) => `${prev} ${token}`.trim());
-    }
+    setPolyInput(prev => `${prev} ${token}`.trim());
   };
 
-  // Parse calculations
-  const parsed = useMemo(() => {
+  // Compute results
+  const parsedData = useMemo(() => {
     const polyRes = parsePolynomial(polyInput);
     const divRes = parseDivisor(divisorInput);
 
-    if (polyRes.error) return { error: polyRes.error };
-    if (divRes.error) return { error: divRes.error };
+    if (polyRes.error) return { error: polyRes.error, poly: null, divisor: null };
+    if (divRes.error) return { error: divRes.error, poly: null, divisor: null };
 
     const poly = polyRes.poly!;
     const divisor = divRes.divisor!;
 
-    const remResult = evaluateRemainderTheorem(poly, divisor);
-    const synthResult = performSyntheticDivision(poly, divisor);
+    let remResult: RemainderTheoremResult | null = null;
+    let synthResult: SyntheticDivisionResult | null = null;
+
+    if (divisor.isLinear) {
+      remResult = evaluateRemainderTheorem(poly, divisor);
+      synthResult = performSyntheticDivision(poly, divisor);
+    }
+
     const longDivResult = performPolynomialLongDivision(poly, divisor);
-    const fullFactorResult = findFullPolynomialFactorization(poly);
 
     return {
+      error: null,
       poly,
       divisor,
       remResult,
       synthResult,
       longDivResult,
-      fullFactorResult,
-      error: null,
     };
   }, [polyInput, divisorInput]);
 
-  const hasResult = !parsed.error && parsed.remResult && parsed.synthResult;
-
-  const handleCopySteps = () => {
-    if (!hasResult) return;
-    const { poly, divisor, remResult, synthResult } = parsed;
-    const text = `Polynomial Remainder Theorem Solution:
-Dividend: P(x) = ${formatPolynomial(poly!)}
-Divisor: D(x) = ${divisor!.divisorString} (Root c = ${remResult!.c})
-
-Method 1: Direct Substitution (Remainder Theorem)
-P(${remResult!.c}) = ${remResult!.directSubstitutionLatex}
-P(${remResult!.c}) = ${remResult!.remainder}
-Remainder R = ${remResult!.remainder}
-
-Factor Theorem Conclusion:
-${remResult!.isFactor ? 'Since R = 0, (x - c) is an EXACT FACTOR of P(x).' : `Since R = ${remResult!.remainder} ≠ 0, (x - c) is NOT a factor.`}
-
-Method 2: Synthetic Division
-Quotient Q(x) = ${formatPolynomial(synthResult!.quotientPoly)}
-Remainder R = ${synthResult!.remainder}
-Identity: ${synthResult!.summaryIdentityLatex}
-
-Method 3: Complete Polynomial Factoring
-${parsed.fullFactorResult?.linearFactorsLatex}`;
-
-    navigator.clipboard.writeText(text);
-    setCopiedSteps(true);
-    setTimeout(() => setCopiedSteps(false), 2000);
-  };
-
-  const handleCopyLatex = () => {
-    if (!hasResult) return;
-    const { remResult, synthResult } = parsed;
-    const latex = `P(${remResult!.c}) = ${remResult!.directSubstitutionLatex} = ${remResult!.remainder} \\\\
-\\implies R = ${remResult!.remainder} \\\\
-${synthResult!.summaryIdentityLatex}`;
-    navigator.clipboard.writeText(latex);
-    setCopiedLatex(true);
-    setTimeout(() => setCopiedLatex(false), 2000);
-  };
-
-  const handleShareLink = () => {
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.set('p', polyInput);
-      url.searchParams.set('d', divisorInput);
-      navigator.clipboard.writeText(url.toString());
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
-    } catch {
-      // fallback
-    }
-  };
-
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-xs">
-      {/* Collapsible Presets & Keypad Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 bg-slate-50 p-3 rounded-xl border border-slate-200">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            {t.examplesTitle}
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            {presets.slice(0, 3).map((p, idx) => (
+    <div className="space-y-6">
+      {/* Input Form Card */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-7 shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-5 border-b border-slate-200">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-50 border border-indigo-200/60 rounded-xl text-indigo-700">
+              <Calculator className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                多项式与除式输入
+              </h2>
+              <p className="text-xs text-slate-500">
+                输入待计算的多项式和除式，支持分数、括号、负数与缺项
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              setPolyInput('2x^3 - 4x^2 + 3x - 5');
+              setDivisorInput('x - 2');
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>重置为默认</span>
+          </button>
+        </div>
+
+        {/* Inputs Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-5">
+          {/* Polynomial Input (8 cols) */}
+          <div className="lg:col-span-8">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              {t.polyLabel}
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={polyInput}
+                onChange={(e) => setPolyInput(e.target.value)}
+                placeholder={t.polyPlaceholder}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-sm sm:text-base focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400"
+              />
+            </div>
+
+            {/* Quick Virtual Keypad */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+              <span className="text-[11px] text-slate-400 mr-1 select-none font-medium">快速插入:</span>
+              {keypadTokens.map((token) => (
+                <button
+                  key={token}
+                  onClick={() => handleKeypadInsert(token)}
+                  className="px-2 py-1 text-xs font-mono font-medium rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/70 transition-colors"
+                >
+                  {token}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Divisor Input (4 cols) */}
+          <div className="lg:col-span-4">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              {t.divisorLabel}
+            </label>
+            <input
+              type="text"
+              value={divisorInput}
+              onChange={(e) => setDivisorInput(e.target.value)}
+              placeholder={t.divisorPlaceholder}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-sm sm:text-base focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400"
+            />
+            <p className="text-[11px] text-slate-400 mt-2">
+              可输入如 <code className="text-slate-600 font-mono">x - 2</code>、<code className="text-slate-600 font-mono">2x - 1</code> 或直接填根 <code className="text-slate-600 font-mono">2</code>
+            </p>
+          </div>
+        </div>
+
+        {/* Quick Presets Pills */}
+        <div className="pt-3 border-t border-slate-100">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500 mr-1 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>{t.presetsTitle}</span>
+            </span>
+            {presets.map((p, idx) => (
               <button
                 key={idx}
                 onClick={() => handleApplyPreset(p)}
-                className="text-xs font-medium px-2.5 py-1 bg-white hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 rounded-md transition-colors border border-slate-200 shadow-2xs"
+                className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-slate-200 text-slate-700 transition-all shadow-2xs"
               >
-                {p.label.split('(')[0].trim()}
+                {p.label}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowKeypad(!showKeypad)}
-            className="text-xs font-semibold px-3 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-md transition-colors shadow-2xs"
-          >
-            {showKeypad ? 'Hide Keypad' : '+ Math Keypad'}
-          </button>
-        </div>
-      </div>
-
-      {/* Input Fields Section */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
-        <div className="md:col-span-7">
-          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-            {t.polyInputLabel}
-          </label>
-          <input
-            type="text"
-            value={polyInput}
-            onChange={(e) => setPolyInput(e.target.value)}
-            placeholder={t.polyInputPlaceholder}
-            className="w-full px-4 py-2.5 text-sm font-mono bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors shadow-2xs"
-          />
-        </div>
-
-        <div className="md:col-span-5">
-          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-            {t.divisorInputLabel}
-          </label>
-          <input
-            type="text"
-            value={divisorInput}
-            onChange={(e) => setDivisorInput(e.target.value)}
-            placeholder={t.divisorInputPlaceholder}
-            className="w-full px-4 py-2.5 text-sm font-mono bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors shadow-2xs"
-          />
-        </div>
-      </div>
-
-      {/* Quick Math Symbols (Collapsible) */}
-      {showKeypad && (
-        <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center gap-2 text-xs text-slate-600 animate-fadeIn">
-          <span className="font-semibold text-slate-700 mr-2">{t.keypadTitle}:</span>
-          {keypadTokens.map((tok, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleKeypadInsert(tok)}
-              className="px-3 py-1.5 font-mono font-medium bg-white hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 border border-slate-200 rounded-md transition-colors shadow-2xs"
-            >
-              {tok}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Error State */}
-      {parsed.error && (
-        <div className="p-4 mb-6 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-start gap-2.5">
-          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold">{t.inputSyntaxError}</p>
-            <p>{parsed.error}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Results Section */}
-      {hasResult && (
-        <div className="space-y-6 pt-2">
-          {/* Unified High-Impact Result Hero */}
-          <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50/60 shadow-2xs">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {/* Stat 1: Remainder */}
-              <div className="space-y-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
-                  {t.remainderBadge}
-                </span>
-                <div className="text-3xl sm:text-4xl font-extrabold font-mono text-slate-900 tabular-nums">
-                  R = {parsed.remResult!.remainder}
-                </div>
-                <p className="text-xs text-slate-500">
-                  {t.evaluatedAtRoot} <span className="font-mono font-semibold text-slate-700">c = {parsed.remResult!.c}</span>
-                </p>
-              </div>
-
-              {/* Stat 2: Factor Theorem Verdict */}
-              <div className="space-y-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
-                  {t.factorTheoremHeading}
-                </span>
-                <div className="flex items-center gap-2">
-                  {parsed.remResult!.isFactor ? (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5 text-slate-400 shrink-0" />
-                  )}
-                  <span className={`text-base font-bold ${parsed.remResult!.isFactor ? 'text-emerald-700' : 'text-slate-700'}`}>
-                    {parsed.remResult!.isFactor ? t.isFactorBadge : t.isNotFactorBadge}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 leading-snug">
-                  {parsed.remResult!.isFactor
-                    ? `(${parsed.divisor!.divisorString}) ${t.dividesWithZeroRemainder}`
-                    : `R = ${parsed.remResult!.remainder} ≠ 0`}
-                </p>
-              </div>
-
-              {/* Stat 3: Quotient */}
-              <div className="space-y-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
-                  {t.quotientLabel}
-                </span>
-                <div className="text-base sm:text-lg font-bold text-slate-900 overflow-x-auto py-0.5">
-                  <MathView math={`Q(x) = ${formatPolynomialLatex(parsed.synthResult!.quotientPoly)}`} />
-                </div>
-              </div>
+        {/* Error notification if parsing fails */}
+        {parsedData.error && (
+          <div className="mt-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 text-xs sm:text-sm flex items-start gap-2.5">
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">输入格式提示</p>
+              <p className="mt-0.5 text-rose-700">{parsedData.error}</p>
             </div>
-
-            {/* Factored Form Banner (if factorable) */}
-            {parsed.fullFactorResult && (
-              <div className="mt-4 pt-4 border-t border-slate-200 flex flex-wrap items-center gap-2 text-sm">
-                <span className="text-xs font-bold text-indigo-700 uppercase tracking-wide">
-                  {t.factoredFormLabel}:
-                </span>
-                <MathView
-                  math={`P(x) = ${parsed.fullFactorResult.linearFactorsLatex}`}
-                  className="font-semibold text-slate-900"
-                />
-              </div>
-            )}
           </div>
+        )}
+      </div>
 
-          {/* Method Explorer & Utility Actions Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-            {/* View Mode Tabs */}
-            <div className="inline-flex p-1 bg-slate-100 rounded-lg border border-slate-200">
+      {/* If input parsed successfully */}
+      {parsedData.poly && parsedData.divisor && parsedData.longDivResult && (
+        <>
+          {/* Hero Summary Card */}
+          <ResultsHeroCard
+            poly={parsedData.poly}
+            divisor={parsedData.divisor}
+            remResult={parsedData.remResult || {
+              c: 0,
+              cFraction: { n: 0, d: 1 },
+              remainder: parsedData.longDivResult.remainderVal,
+              remainderFraction: { n: parsedData.longDivResult.remainderVal, d: 1 },
+              steps: [],
+              directSubstitutionLatex: '',
+              expandedCalculationLatex: '',
+              isFactor: parsedData.longDivResult.isFactor,
+            }}
+            synthResult={parsedData.synthResult || {
+              c: 0,
+              cFraction: { n: 0, d: 1 },
+              divisorA: 1,
+              topRow: parsedData.poly.coefficients,
+              middleRow: [],
+              bottomRow: [],
+              quotientCoefficients: parsedData.longDivResult.quotientPoly.coefficients,
+              quotientPoly: parsedData.longDivResult.quotientPoly,
+              remainder: parsedData.longDivResult.remainderVal,
+              steps: [],
+              summaryIdentityLatex: parsedData.longDivResult.identityLatex,
+              isFactor: parsedData.longDivResult.isFactor,
+            }}
+            longDivResult={parsedData.longDivResult}
+            t={t}
+          />
+
+          {/* View Mode Selector Tabs & Visualizer Toggle */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-2xs">
+            <div className="flex items-center gap-1.5 overflow-x-auto">
               <button
-                onClick={() => setActiveViewMode('all')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-                  activeViewMode === 'all'
-                    ? 'bg-white text-indigo-700 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                onClick={() => setViewMode('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  viewMode === 'all'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                {t.viewAllMethods}
+                {t.viewAll}
               </button>
+              {parsedData.divisor.isLinear && (
+                <>
+                  <button
+                    onClick={() => setViewMode('direct')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                      viewMode === 'direct'
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    {t.viewDirect}
+                  </button>
+                  <button
+                    onClick={() => setViewMode('synthetic')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                      viewMode === 'synthetic'
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    {t.viewSynthetic}
+                  </button>
+                </>
+              )}
               <button
-                onClick={() => setActiveViewMode('direct')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-                  activeViewMode === 'direct'
-                    ? 'bg-white text-indigo-700 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {t.viewDirect}
-              </button>
-              <button
-                onClick={() => setActiveViewMode('synthetic')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-                  activeViewMode === 'synthetic'
-                    ? 'bg-white text-indigo-700 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {t.viewSynthetic}
-              </button>
-              <button
-                onClick={() => setActiveViewMode('longDivision')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-                  activeViewMode === 'longDivision'
-                    ? 'bg-white text-indigo-700 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                onClick={() => setViewMode('longDivision')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  viewMode === 'longDivision'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
                 {t.viewLongDivision}
               </button>
             </div>
 
-            {/* Utility Actions */}
-            <div className="flex items-center gap-2">
+            {/* Toggle Curve Visualizer */}
+            {parsedData.divisor.isLinear && (
               <button
-                onClick={handleCopySteps}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs"
+                onClick={() => setShowCurve(!showCurve)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                  showCurve
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
               >
-                {copiedSteps ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
-                <span>{copiedSteps ? t.stepsCopied : t.copySteps}</span>
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>{showCurve ? '隐藏几何曲线' : '查看几何曲线'}</span>
               </button>
-
-              <button
-                onClick={handleCopyLatex}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs"
-              >
-                {copiedLatex ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Code className="w-3.5 h-3.5 text-slate-500" />}
-                <span>{copiedLatex ? t.latexCopied : t.copyLatex}</span>
-              </button>
-
-              <button
-                onClick={handleShareLink}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs"
-              >
-                {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5 text-slate-500" />}
-                <span>{copiedLink ? t.linkCopied : t.shareLink}</span>
-              </button>
-
-              <button
-                onClick={() => window.print()}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs"
-              >
-                <Printer className="w-3.5 h-3.5 text-slate-500" />
-                <span>{t.printOrSave}</span>
-              </button>
-            </div>
+            )}
           </div>
 
-          {/* Method 1: Direct Substitution (Remainder Theorem) */}
-          {(activeViewMode === 'all' || activeViewMode === 'direct') && (
-            <div className="border border-slate-200 rounded-xl p-5 md:p-6 bg-white shadow-2xs">
-              <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-1">{t.method1Title}</h4>
-              <p className="text-sm sm:text-base text-slate-600 mb-4">{t.method1Desc}</p>
-
-              <div className="bg-slate-50 rounded-xl p-4 sm:p-5 border border-slate-200 space-y-3">
-                <div>
-                  <span className="text-xs text-slate-500 font-bold block mb-1">{t.method1Step1}</span>
-                  <MathView
-                    math={`P(${parsed.remResult!.c}) = ${parsed.remResult!.directSubstitutionLatex}`}
-                    block={true}
-                    className="text-base sm:text-lg text-slate-900 font-semibold"
-                  />
-                </div>
-
-                <div>
-                  <span className="text-xs text-slate-500 font-bold block mb-1">{t.method1Step2}</span>
-                  <MathView
-                    math={`P(${parsed.remResult!.c}) = ${parsed.remResult!.expandedCalculationLatex}`}
-                    block={true}
-                    className="text-base sm:text-lg text-slate-900 font-semibold"
-                  />
-                </div>
-
-                <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
-                  <span className="text-xs font-bold text-indigo-700 uppercase">{t.method1RemainderVal}</span>
-                  <span className="text-xl font-bold font-mono text-slate-900 tabular-nums">
-                    R = P({parsed.remResult!.c}) = {parsed.remResult!.remainder}
-                  </span>
-                </div>
-              </div>
-            </div>
+          {/* Interactive Curve Visualizer (if enabled and linear) */}
+          {showCurve && parsedData.divisor.isLinear && (
+            <PolynomialCurveVisualizer
+              poly={parsedData.poly}
+              divisor={parsedData.divisor}
+              t={t}
+            />
           )}
 
-          {/* Method 2: Synthetic Division Matrix */}
-          {(activeViewMode === 'all' || activeViewMode === 'synthetic') && (
-            <SyntheticDivisionTable result={parsed.synthResult!} t={t} />
+          {/* Method 1: Direct Evaluation */}
+          {parsedData.divisor.isLinear && parsedData.remResult && (viewMode === 'all' || viewMode === 'direct') && (
+            <DirectEvaluationCard
+              poly={parsedData.poly}
+              divisor={parsedData.divisor}
+              result={parsedData.remResult}
+              t={t}
+            />
           )}
 
-          {/* Method 3: Polynomial Long Division Layout */}
-          {(activeViewMode === 'all' || activeViewMode === 'longDivision') && (
-            <PolynomialLongDivisionView result={parsed.longDivResult!} t={t} />
+          {/* Method 2: Synthetic Division */}
+          {parsedData.divisor.isLinear && parsedData.synthResult && (viewMode === 'all' || viewMode === 'synthetic') && (
+            <SyntheticDivisionCard
+              result={parsedData.synthResult}
+              t={t}
+            />
           )}
 
-          {/* Rational Root Theorem Grid */}
-          <RationalRootsGrid
-            poly={parsed.poly!}
-            t={t}
-            onSelectCandidate={(cStr) => {
-              setDivisorInput(cStr);
-            }}
-          />
-        </div>
+          {/* Method 3: Polynomial Long Division */}
+          {(viewMode === 'all' || viewMode === 'longDivision' || !parsedData.divisor.isLinear) && (
+            <LongDivisionCard
+              result={parsedData.longDivResult}
+              t={t}
+            />
+          )}
+        </>
       )}
     </div>
   );

@@ -1,59 +1,57 @@
 import React from 'react';
 import { Translations } from '../utils/i18n';
-import { GitBranch, ShieldCheck } from 'lucide-react';
+import { Calculator } from 'lucide-react';
 
 interface FooterProps {
   t: Translations;
-  onSelectTab: (tab: 'remainder' | 'completing' | 'practice') => void;
+  onSelectTab: (tab: 'calculator' | 'factor' | 'graph' | 'quiz' | 'guide') => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ t, onSelectTab }) => {
   return (
-    <footer className="mt-20 border-t border-slate-200 bg-white py-12 text-slate-500 text-sm">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-8 border-b border-slate-100">
-          <div>
-            <div className="text-base font-bold text-slate-900 mb-1">
-              Polynomial Remainder Theorem Calculator
-            </div>
-            <p className="text-xs text-slate-500 max-w-md">
-              {t.footerDisclaimer}
-            </p>
+    <footer className="bg-slate-900 text-slate-400 text-xs py-8 border-t border-slate-800 mt-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-white font-semibold">
+            <Calculator className="w-4 h-4 text-indigo-400" />
+            <span>{t.appName}</span>
           </div>
 
-          <div className="flex flex-wrap gap-6 text-xs font-medium text-slate-600">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-slate-400">
             <button
-              onClick={() => onSelectTab('remainder')}
-              className="hover:text-slate-900 transition-colors"
+              onClick={() => onSelectTab('calculator')}
+              className="hover:text-white transition-colors"
             >
-              {t.navCalculator}
+              {t.tabCalculator}
             </button>
             <button
-              onClick={() => onSelectTab('completing')}
-              className="hover:text-slate-900 transition-colors"
+              onClick={() => onSelectTab('factor')}
+              className="hover:text-white transition-colors"
             >
-              {t.navCompletingSquare}
+              {t.tabFactor}
             </button>
             <button
-              onClick={() => onSelectTab('practice')}
-              className="hover:text-slate-900 transition-colors"
+              onClick={() => onSelectTab('graph')}
+              className="hover:text-white transition-colors"
             >
-              {t.navPractice}
+              {t.tabGraph}
             </button>
-            <a href="#guide" className="hover:text-slate-900 transition-colors">
-              {t.navFaq}
-            </a>
+            <button
+              onClick={() => onSelectTab('quiz')}
+              className="hover:text-white transition-colors"
+            >
+              {t.tabQuiz}
+            </button>
+            <button
+              onClick={() => onSelectTab('guide')}
+              className="hover:text-white transition-colors"
+            >
+              {t.tabGuide}
+            </button>
           </div>
-        </div>
 
-        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>{t.footerPledge}</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span>© {new Date().getFullYear()} RemainderTheorem.pro · {t.footerRights}</span>
+          <div className="text-slate-500 text-center sm:text-right">
+            P(x) = D(x) · Q(x) + R · 高中代数与微积分预备
           </div>
         </div>
       </div>
