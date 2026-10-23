@@ -19,18 +19,39 @@ export function gcd(a: number, b: number): number {
   return a || 1;
 }
 
+/**
+ * Converts float or integer into reduced Fraction
+ */
 export function createFraction(n: number, d = 1): Fraction {
   if (d === 0) throw new Error("Denominator cannot be zero");
   if (d < 0) {
     n = -n;
     d = -d;
   }
-  // If either n or d is a floating point, convert to integer fraction
+
+  // Handle floating points precisely using continued fractions / scaling
   if (!Number.isInteger(n) || !Number.isInteger(d)) {
-    const precision = 100000;
-    n = Math.round(n * precision);
-    d = Math.round(d * precision);
+    const val = n / d;
+    if (Math.abs(val) < 1e-12) return { n: 0, d: 1 };
+
+    let bestN = Math.round(val);
+    let bestD = 1;
+    let minErr = Math.abs(val - bestN);
+
+    for (let den = 1; den <= 1000; den++) {
+      const num = Math.round(val * den);
+      const err = Math.abs(val - num / den);
+      if (err < minErr) {
+        minErr = err;
+        bestN = num;
+        bestD = den;
+        if (err < 1e-7) break;
+      }
+    }
+    const g = gcd(bestN, bestD);
+    return { n: Math.round(bestN / g), d: Math.round(bestD / g) };
   }
+
   const g = gcd(n, d);
   return { n: Math.round(n / g), d: Math.round(d / g) };
 }
@@ -74,7 +95,7 @@ export interface Polynomial {
 }
 
 /**
- * Replace unicode superscripts and signs with standard ASCII
+ * Normalizes mathematical characters, superscripts, and operators
  */
 function normalizeMathString(input: string): string {
   const superscriptMap: Record<string, string> = {
@@ -83,12 +104,12 @@ function normalizeMathString(input: string): string {
   };
 
   let str = input.trim();
-  // Unicode superscripts
   for (const [sup, std] of Object.entries(superscriptMap)) {
     str = str.split(sup).join(std);
   }
 
   return str
+    .replace(/\*\*/g, '^') // Convert ** to ^
     .replace(/[−–—]/g, '-')
     .replace(/[·×*]/g, '*')
     .replace(/\s+/g, ' ');
@@ -116,20 +137,19 @@ export function parsePolynomial(input: string, variable = 'x'): { poly: Polynomi
     const clean = normalizeMathString(input).replace(/\s+/g, '');
     if (!clean) return { poly: null, error: "请输入多项式 (Please enter a polynomial)" };
 
-    // Strip outer parentheses if any
     let s = clean;
-    if (s.startsWith('(') && s.endsWith(')')) {
+    if (s.startsWith('(') && s.endsWith(')') && !s.includes(')(')) {
       s = s.slice(1, -1);
     }
 
     const varLetter = variable.toLowerCase();
-    // Validate characters: digits, variable, +, -, ^, ., /, *
-    const allowed = new RegExp(`^[0-9+\\-^${varLetter}.\\/*]+$`, 'i');
+    // Validate allowed characters: digits, variable, +, -, ^, ., /, *, (,)
+    const allowed = new RegExp(`^[0-9+\\-^${varLetter}.\\/*()]+$`, 'i');
     if (!allowed.test(s)) {
-      return { poly: null, error: `含有非法字符。仅支持数字、变量 ${variable}、+、-、^ 与 /` };
+      return { poly: null, error: `含有非法字符。仅支持数字、变量 ${variable}、+、-、^、/ 与括号` };
     }
 
-    // Split into terms while preserving sign
+    // Split into terms while preserving signs
     const termRegex = /([+-]?[^+-]+)/g;
     const matches = s.match(termRegex);
     if (!matches || matches.length === 0) {
@@ -171,8 +191,8 @@ export function parsePolynomial(input: string, variable = 'x'): { poly: Polynomi
           return { poly: null, error: `变量后的非法字符: ${afterVar}` };
         }
 
-        if (power > 20) {
-          return { poly: null, error: "最高支持20次多项式" };
+        if (power > 25) {
+          return { poly: null, error: "最高支持25次多项式" };
         }
 
         maxDegree = Math.max(maxDegree, power);
@@ -225,7 +245,8 @@ export function formatPolynomial(poly: Polynomial): string {
     const isFirst = terms.length === 0;
     const sign = c < 0 ? "-" : (isFirst ? "" : "+");
     const absC = Math.abs(c);
-    const absCStr = Number.isInteger(absC) ? absC.toString() : absC.toFixed(2).replace(/\.?0+$/, '');
+    const frac = createFraction(absC);
+    const absCStr = frac.d === 1 ? `${frac.n}` : `${frac.n}/${frac.d}`;
 
     let termStr = "";
     if (power === 0) {
@@ -270,7 +291,8 @@ export function formatPolynomialLatex(poly: Polynomial): string {
     const isFirst = terms.length === 0;
     const sign = c < 0 ? "-" : (isFirst ? "" : "+");
     const absC = Math.abs(c);
-    const absCStr = Number.isInteger(absC) ? absC.toString() : absC.toFixed(2).replace(/\.?0+$/, '');
+    const frac = createFraction(absC);
+    const absCStr = frac.d === 1 ? `${frac.n}` : `\\frac{${frac.n}}{${frac.d}}`;
 
     let termStr = "";
     if (power === 0) {
@@ -323,7 +345,7 @@ export function parseDivisor(input: string, variable = 'x'): { divisor: DivisorI
     if (/^[+-]?[0-9]+(\.[0-9]+)?$/.test(clean)) {
       const c = parseFloat(clean);
       const frac = createFraction(c);
-      const divStr = c >= 0 ? `${variable} - ${c}` : `${variable} + ${Math.abs(c)}`;
+      const divStr = c >= 0 ? `${variable} - ${formatFraction(frac)}` : `${variable} + ${formatFraction(createFraction(Math.abs(frac.n), frac.d))}`;
       return {
         divisor: {
           a: 1,
@@ -370,7 +392,7 @@ export function parseDivisor(input: string, variable = 'x'): { divisor: DivisorI
 
     const poly = polyParsed.poly;
     if (poly.degree === 1) {
-      // Linear divisor: a*x + d => a*x - b = 0 => b = -d
+      // Linear divisor: a*x + constant = 0 => a*x - b = 0 => b = -constant
       const a = poly.coefficients[0];
       const constant = poly.coefficients[1] || 0;
       const b = -constant;
@@ -526,7 +548,7 @@ export interface SyntheticDivisionResult {
 }
 
 /**
- * Synthetic Division (综合除法) for linear divisor (ax - b)
+ * Synthetic Division for linear divisor (ax - b)
  */
 export function performSyntheticDivision(poly: Polynomial, divisor: DivisorInfo): SyntheticDivisionResult {
   const c = divisor.c;
@@ -634,7 +656,7 @@ export interface PolynomialLongDivisionResult {
 }
 
 /**
- * General Polynomial Long Division (多项式长除法)
+ * General Polynomial Long Division
  * Handles degree >= 1 divisors
  */
 export function performPolynomialLongDivision(
@@ -659,7 +681,7 @@ export function performPolynomialLongDivision(
 
   let stepCount = 0;
   while (currentDegree >= dDegree && stepCount < 20) {
-    // Strip leading zeros in currentWorkingCoeffs
+    // Strip leading zeros
     while (currentWorkingCoeffs.length > 0 && Math.abs(currentWorkingCoeffs[0]) < 1e-9) {
       currentWorkingCoeffs.shift();
       currentDegree--;
@@ -674,23 +696,18 @@ export function performPolynomialLongDivision(
 
     quotientCoeffs.push({ power: qPower, coeff: qCoeff });
 
-    // Multiplied poly: qCoeff * x^qPower * divisorPoly
-    // Degree of multiplied poly is currentDegree
     const multFullCoeffs = new Array(currentDegree + 1).fill(0);
     for (let j = 0; j < divisorPoly.coefficients.length; j++) {
       const p = currentDegree - j;
       multFullCoeffs[currentDegree - p] = qCoeff * divisorPoly.coefficients[j];
     }
 
-    // Working poly representation
     const workPoly: Polynomial = {
       coefficients: [...currentWorkingCoeffs],
       degree: currentDegree,
       variable: v,
     };
 
-    // Subtraction: currentWorkingCoeffs - multiplied
-    // Pad currentWorkingCoeffs if needed
     const paddedWorking = [...currentWorkingCoeffs];
     while (paddedWorking.length < currentDegree + 1) {
       paddedWorking.push(0);
@@ -733,7 +750,6 @@ export function performPolynomialLongDivision(
     currentDegree--;
   }
 
-  // Build final quotient poly
   const maxQDegree = Math.max(0, dividend.degree - dDegree);
   const finalQCoeffs = new Array(maxQDegree + 1).fill(0);
   for (const item of quotientCoeffs) {
@@ -748,7 +764,6 @@ export function performPolynomialLongDivision(
     variable: v,
   };
 
-  // Strip leading zeros for remainder
   while (currentWorkingCoeffs.length > 1 && Math.abs(currentWorkingCoeffs[0]) < 1e-9) {
     currentWorkingCoeffs.shift();
   }
@@ -808,8 +823,7 @@ export function getIntegerFactors(num: number): number[] {
 }
 
 /**
- * Rational Root Theorem (有理根定理):
- * Candidates = +/- (factors of a_0) / (factors of a_n)
+ * Rational Root Theorem: Candidates = +/- (factors of a_0) / (factors of a_n)
  */
 export function computeRationalRootCandidates(poly: Polynomial): {
   constantTerm: number;
@@ -847,7 +861,6 @@ export function computeRationalRootCandidates(poly: Polynomial): {
         if (!seen.has(key)) {
           seen.add(key);
           const val = frac.n / frac.d;
-          // Test candidate
           let rem = 0;
           for (let i = 0; i < poly.coefficients.length; i++) {
             const power = poly.degree - i;
@@ -964,7 +977,6 @@ export function findFullPolynomialFactorization(poly: Polynomial): CompleteFacto
     }
   }
 
-  // Factor terms
   let remainingLeading = leading;
   const factorTerms: string[] = [];
   for (const r of rootsFound) {
@@ -1005,15 +1017,11 @@ export function findFullPolynomialFactorization(poly: Polynomial): CompleteFacto
   };
 }
 
-/**
- * Generate sampling points for polynomial curve visualization
- */
 export function generatePolynomialCurvePoints(
   poly: Polynomial,
   cValue: number,
   pointsCount = 120
 ): { points: { x: number; y: number }[]; minX: number; maxX: number; minY: number; maxY: number; pOfC: number } {
-  // Center around cValue
   const span = Math.max(4, Math.abs(cValue) + 3);
   const minX = cValue - span;
   const maxX = cValue + span;
@@ -1032,18 +1040,15 @@ export function generatePolynomialCurvePoints(
     points.push({ x, y });
   }
 
-  // Exact pOfC
   for (let j = 0; j < poly.coefficients.length; j++) {
     const power = poly.degree - j;
     pOfC += poly.coefficients[j] * Math.pow(cValue, power);
   }
 
-  // Filter extreme vertical values for plot sanity
   const validYs = points.map(p => p.y).filter(y => !isNaN(y) && isFinite(y));
   let minY = Math.min(...validYs, pOfC, 0);
   let maxY = Math.max(...validYs, pOfC, 0);
 
-  // Clamp height to avoid massive asymptotes
   const ySpan = maxY - minY;
   if (ySpan > 200) {
     const mid = pOfC;
