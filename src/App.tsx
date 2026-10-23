@@ -28,26 +28,25 @@ export default function App() {
         return saved as Language;
       }
 
-      // Auto-detect browser language
+      // Auto-detect browser language if specific
       const browserLang = navigator.language?.toLowerCase() || '';
-      if (browserLang.startsWith('en')) return 'en';
+      if (browserLang.startsWith('zh')) return 'zh';
       if (browserLang.startsWith('es')) return 'es';
       if (browserLang.startsWith('fr')) return 'fr';
       if (browserLang.startsWith('pt')) return 'pt';
       if (browserLang.startsWith('de')) return 'de';
       if (browserLang.startsWith('ja')) return 'ja';
-      if (browserLang.startsWith('zh')) return 'zh';
     } catch {
       // ignore
     }
-    return 'zh'; // Default
+    return 'en'; // Default to English
   });
 
   const [activeTab, setActiveTab] = useState<'calculator' | 'factor' | 'graph' | 'quiz' | 'guide'>('calculator');
   const [currentPolyStr, setCurrentPolyStr] = useState<string>('2x^3 - 4x^2 + 3x - 5');
   const [currentDivisorStr, setCurrentDivisorStr] = useState<string>('x - 2');
 
-  const t = translations[lang] || translations.zh;
+  const t = translations[lang] || translations.en;
 
   useEffect(() => {
     try {
