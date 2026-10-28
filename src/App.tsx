@@ -34,7 +34,7 @@ export default function App() {
     return 'en'; // Default to English for all users
   });
 
-  const [activeTab, setActiveTab] = useState<'calculator' | 'factor' | 'graph' | 'quiz' | 'guide'>('calculator');
+  const [activeTab, setActiveTab] = useState<'calculator' | 'factor' | 'graph' | 'batch' | 'quiz' | 'guide'>('calculator');
   const [currentPolyStr, setCurrentPolyStr] = useState<string>(() => {
     try {
       const params = new URLSearchParams(window.location.search);

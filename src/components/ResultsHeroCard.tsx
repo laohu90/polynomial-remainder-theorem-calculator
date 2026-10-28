@@ -7,6 +7,7 @@ import {
   RemainderTheoremResult,
   SyntheticDivisionResult,
   PolynomialLongDivisionResult,
+  formatPolynomial,
   formatPolynomialLatex,
   formatFraction,
 } from '../utils/mathEngine';

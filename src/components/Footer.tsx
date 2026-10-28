@@ -4,7 +4,7 @@ import { Calculator } from 'lucide-react';
 
 interface FooterProps {
   t: Translations;
-  onSelectTab: (tab: 'calculator' | 'factor' | 'graph' | 'quiz' | 'guide') => void;
+  onSelectTab: (tab: 'calculator' | 'factor' | 'graph' | 'batch' | 'quiz' | 'guide') => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ t, onSelectTab }) => {
@@ -35,6 +35,12 @@ export const Footer: React.FC<FooterProps> = ({ t, onSelectTab }) => {
               className="hover:text-white transition-colors"
             >
               {t.tabGraph}
+            </button>
+            <button
+              onClick={() => onSelectTab('batch')}
+              className="hover:text-white transition-colors"
+            >
+              {t.tabBatch}
             </button>
             <button
               onClick={() => onSelectTab('quiz')}
