@@ -1,6 +1,8 @@
 /**
  * Robust Mathematical Engine for Polynomial Remainder Theorem,
- * Factor Theorem, Synthetic Division, and Polynomial Long Division.
+ * Factor Theorem, Synthetic Division, Ruffini's Rule, and Polynomial Long Division.
+ * Includes character-precise syntax diagnostics, parametric variable support,
+ * batch candidate evaluation, and comparative analytics.
  */
 
 export interface Fraction {
@@ -19,9 +21,6 @@ export function gcd(a: number, b: number): number {
   return a || 1;
 }
 
-/**
- * Converts float or integer into reduced Fraction
- */
 export function createFraction(n: number, d = 1): Fraction {
   if (d === 0) throw new Error("Denominator cannot be zero");
   if (d < 0) {
@@ -29,7 +28,6 @@ export function createFraction(n: number, d = 1): Fraction {
     d = -d;
   }
 
-  // Handle floating points precisely using continued fractions / scaling
   if (!Number.isInteger(n) || !Number.isInteger(d)) {
     const val = n / d;
     if (Math.abs(val) < 1e-12) return { n: 0, d: 1 };
@@ -94,25 +92,200 @@ export interface Polynomial {
   variable: string;
 }
 
+export interface ParseDiagnostic {
+  isError: boolean;
+  code: string;
+  message: string;
+  detail?: string;
+  position?: number; // 0-based character index
+  length?: number;
+  caretSnippet?: string; // Formatted visual pointer
+  highlightSnippet?: string;
+  suggestion?: string;
+  quickFix?: string; // Proposed automatic correction
+}
+
 /**
- * Normalizes mathematical characters, superscripts, and operators
+ * Normalizes mathematical characters, superscripts, and operators while preserving length/indices when possible.
  */
-function normalizeMathString(input: string): string {
+export function normalizeMathString(input: string): string {
   const superscriptMap: Record<string, string> = {
     '⁰': '^0', '¹': '^1', '²': '^2', '³': '^3', '⁴': '^4',
     '⁵': '^5', '⁶': '^6', '⁷': '^7', '⁸': '^8', '⁹': '^9',
   };
 
-  let str = input.trim();
+  let str = input;
   for (const [sup, std] of Object.entries(superscriptMap)) {
     str = str.split(sup).join(std);
   }
 
   return str
-    .replace(/\*\*/g, '^') // Convert ** to ^
+    .replace(/\*\*/g, '^')
     .replace(/[−–—]/g, '-')
-    .replace(/[·×*]/g, '*')
-    .replace(/\s+/g, ' ');
+    .replace(/[·×*]/g, '*');
+}
+
+/**
+ * Generates an ASCII caret string pointing to an error position
+ */
+export function createCaretSnippet(input: string, position: number, length = 1): string {
+  const line = input;
+  const clampedPos = Math.max(0, Math.min(position, input.length));
+  const pointer = ' '.repeat(clampedPos) + '^'.repeat(Math.max(1, length));
+  return `${line}\n${pointer}`;
+}
+
+/**
+ * Analyzes string syntax and returns detailed diagnostics with caret pointers
+ */
+export function diagnoseExpressionSyntax(input: string, variable = 'x'): ParseDiagnostic | null {
+  const raw = input.trim();
+  if (!raw) {
+    return {
+      isError: true,
+      code: 'EMPTY_INPUT',
+      message: '输入为空 (Input expression is empty)',
+      detail: `请输入关于变量 ${variable} 的多项式，例如: 2${variable}^3 - 4${variable}^2 + 3${variable} - 5`,
+    };
+  }
+
+  const normalized = normalizeMathString(raw);
+  const varLower = variable.toLowerCase();
+
+  // 1. Check for unexpected symbols
+  const validCharRegex = /^[0-9a-zA-Z+\-^./*()\sθ]+$/;
+  for (let i = 0; i < normalized.length; i++) {
+    const ch = normalized[i];
+    if (!validCharRegex.test(ch)) {
+      return {
+        isError: true,
+        code: 'ILLEGAL_CHARACTER',
+        message: `包含非法字符 '${ch}' (Unexpected character)`,
+        detail: `位置 ${i + 1} 发现符号 '${ch}'。多项式仅支持数字、变量 ${variable}、算术运算符 (+, -, *, /, ^) 与括号。`,
+        position: i,
+        length: 1,
+        caretSnippet: createCaretSnippet(normalized, i, 1),
+        quickFix: normalized.replace(new RegExp(`\\${ch}`, 'g'), ''),
+      };
+    }
+  }
+
+  // 2. Check for unmatched parentheses
+  let parenDepth = 0;
+  const parenStack: number[] = [];
+  for (let i = 0; i < normalized.length; i++) {
+    if (normalized[i] === '(') {
+      parenDepth++;
+      parenStack.push(i);
+    } else if (normalized[i] === ')') {
+      if (parenDepth === 0) {
+        return {
+          isError: true,
+          code: 'UNMATCHED_CLOSE_PAREN',
+          message: '多余的闭括号 \')\' (Unmatched closing parenthesis)',
+          detail: `位置 ${i + 1} 出现未匹配的 ')'，前面没有对应的 '('。`,
+          position: i,
+          length: 1,
+          caretSnippet: createCaretSnippet(normalized, i, 1),
+          quickFix: normalized.slice(0, i) + normalized.slice(i + 1),
+        };
+      }
+      parenDepth--;
+      parenStack.pop();
+    }
+  }
+  if (parenDepth > 0) {
+    const openIdx = parenStack[parenStack.length - 1];
+    return {
+      isError: true,
+      code: 'UNCLOSED_PAREN',
+      message: '缺少闭括号 \')\' (Unclosed opening parenthesis)',
+      detail: `位置 ${openIdx + 1} 打开的 '(' 未正确闭合。`,
+      position: openIdx,
+      length: 1,
+      caretSnippet: createCaretSnippet(normalized, openIdx, 1),
+      quickFix: normalized + ')'.repeat(parenDepth),
+    };
+  }
+
+  // 3. Consecutive operators check (e.g. ^^, ++, **, --)
+  const consecMatch = normalized.match(/(\^{2,}|\*{2,}|\+{2,}|--|\+\-|\-\+|\/\*|\*\/)/);
+  if (consecMatch && consecMatch.index !== undefined) {
+    const idx = consecMatch.index;
+    const seq = consecMatch[0];
+    let fix = '';
+    if (seq.startsWith('^')) fix = '^';
+    else if (seq === '--') fix = '+';
+    else if (seq === '+-') fix = '-';
+    else if (seq === '++') fix = '+';
+    else fix = seq[0];
+
+    return {
+      isError: true,
+      code: 'CONSECUTIVE_OPERATORS',
+      message: `连续多余运算符 '${seq}' (Consecutive arithmetic operators)`,
+      detail: `位置 ${idx + 1} 出现连续运算符 '${seq}'，请删除重复符号或用括号分组。`,
+      position: idx,
+      length: seq.length,
+      caretSnippet: createCaretSnippet(normalized, idx, seq.length),
+      quickFix: normalized.slice(0, idx) + fix + normalized.slice(idx + seq.length),
+    };
+  }
+
+  // 4. Trailing operator check (e.g. "3x +")
+  const trailingMatch = normalized.match(/[+\-*^/]\s*$/);
+  if (trailingMatch && trailingMatch.index !== undefined) {
+    const idx = trailingMatch.index;
+    const op = normalized[idx];
+    return {
+      isError: true,
+      code: 'DANGLING_OPERATOR',
+      message: `末尾遗漏操作数 (Dangling trailing operator '${op}')`,
+      detail: `多项式末尾发现未完成的运算符 '${op}'，请补充后续数值、项或删除此符号。`,
+      position: idx,
+      length: 1,
+      caretSnippet: createCaretSnippet(normalized, idx, 1),
+      quickFix: normalized.slice(0, idx).trimEnd(),
+    };
+  }
+
+  // 5. Dangling exponent check (e.g. "3x^ - 2" or "x^")
+  const dangExpMatch = normalized.match(/\^\s*([+\-*/()])/);
+  if (dangExpMatch && dangExpMatch.index !== undefined) {
+    const idx = dangExpMatch.index;
+    return {
+      isError: true,
+      code: 'DANGLING_EXPONENT',
+      message: "指数符 '^' 后缺少数字 (Incomplete exponent after '^')",
+      detail: `位置 ${idx + 1} 的 '^' 后面没有具体的整数指数。例如: 应书写为 3${variable}^2 而非 3${variable}^`,
+      position: idx,
+      length: 1,
+      caretSnippet: createCaretSnippet(normalized, idx, 1),
+      suggestion: `3${variable}^2`,
+      quickFix: normalized.slice(0, idx + 1) + '2' + normalized.slice(idx + 1),
+    };
+  }
+
+  // 6. Variable mismatch check (e.g. user typed 'y' when active variable is 'x')
+  const letterMatches = normalized.match(/[a-zA-Zθ]/g) || [];
+  const foreignLetters = Array.from(new Set(letterMatches.filter(l => l.toLowerCase() !== varLower)));
+  if (foreignLetters.length > 0) {
+    const foreign = foreignLetters[0];
+    const pos = normalized.indexOf(foreign);
+    return {
+      isError: true,
+      code: 'VARIABLE_MISMATCH',
+      message: `检测到不同变量 '${foreign}' (Variable mismatch)`,
+      detail: `当前计算设定的自变量为 '${variable}'，但输入中发现了变量 '${foreign}'。您可以一键切换自变量为 '${foreign}'，或将 '${foreign}' 替换为 '${variable}'。`,
+      position: pos,
+      length: 1,
+      caretSnippet: createCaretSnippet(normalized, pos, 1),
+      suggestion: foreign,
+      quickFix: normalized.replace(new RegExp(foreign, 'g'), variable),
+    };
+  }
+
+  return null;
 }
 
 function parseCoeff(str: string): number {
@@ -129,31 +302,40 @@ function parseCoeff(str: string): number {
 }
 
 /**
- * Robust parser for polynomials like:
- * "2x^3 - 4x^2 + 3x - 5", "x^4 - 16", "3x^2+5x-2", "-x^3 + 4x", "x³ - 8"
+ * Robust parser for polynomials with detailed syntax diagnostics
  */
-export function parsePolynomial(input: string, variable = 'x'): { poly: Polynomial | null; error: string | null } {
+export function parsePolynomial(
+  input: string,
+  variable = 'x'
+): { poly: Polynomial | null; error: string | null; diagnostic: ParseDiagnostic | null } {
   try {
-    const clean = normalizeMathString(input).replace(/\s+/g, '');
-    if (!clean) return { poly: null, error: "请输入多项式 (Please enter a polynomial)" };
+    const diag = diagnoseExpressionSyntax(input, variable);
+    if (diag && diag.isError) {
+      return { poly: null, error: diag.message, diagnostic: diag };
+    }
 
+    const clean = normalizeMathString(input).replace(/\s+/g, '');
     let s = clean;
     if (s.startsWith('(') && s.endsWith(')') && !s.includes(')(')) {
       s = s.slice(1, -1);
     }
 
     const varLetter = variable.toLowerCase();
-    // Validate allowed characters: digits, variable, +, -, ^, ., /, *, (,)
-    const allowed = new RegExp(`^[0-9+\\-^${varLetter}.\\/*()]+$`, 'i');
-    if (!allowed.test(s)) {
-      return { poly: null, error: `含有非法字符。仅支持数字、变量 ${variable}、+、-、^、/ 与括号` };
-    }
 
-    // Split into terms while preserving signs
+    // Split into terms while preserving signs: 2x^3 - 4x^2 + 3x - 5
     const termRegex = /([+-]?[^+-]+)/g;
     const matches = s.match(termRegex);
     if (!matches || matches.length === 0) {
-      return { poly: null, error: "无法解析多项式项" };
+      return {
+        poly: null,
+        error: "无法解析多项式项 (Unable to parse terms)",
+        diagnostic: {
+          isError: true,
+          code: 'NO_TERMS',
+          message: '无法解析有效多项式项',
+          detail: '请检查输入的各项符号与系数',
+        },
+      };
     }
 
     const powerMap: { [pow: number]: number } = {};
@@ -167,7 +349,18 @@ export function parsePolynomial(input: string, variable = 'x'): { poly: Polynomi
       if (vIndex === -1) {
         // Constant term
         const val = parseCoeff(term);
-        if (isNaN(val)) return { poly: null, error: `无效常数项: ${term}` };
+        if (isNaN(val)) {
+          return {
+            poly: null,
+            error: `无效常数项: ${term}`,
+            diagnostic: {
+              isError: true,
+              code: 'INVALID_CONSTANT',
+              message: `无效常数项: '${term}'`,
+              detail: `无法将 '${term}' 解析为有效实数或分数`,
+            },
+          };
+        }
         powerMap[0] = (powerMap[0] || 0) + val;
       } else {
         // Variable term
@@ -177,22 +370,74 @@ export function parsePolynomial(input: string, variable = 'x'): { poly: Polynomi
         else if (coeffPart === '-') coeff = -1;
         else {
           coeff = parseCoeff(coeffPart);
-          if (isNaN(coeff)) return { poly: null, error: `项 ${term} 的系数无效` };
+          if (isNaN(coeff)) {
+            return {
+              poly: null,
+              error: `项 '${term}' 的系数无效`,
+              diagnostic: {
+                isError: true,
+                code: 'INVALID_COEFF',
+                message: `项 '${term}' 的系数格式不正确`,
+                detail: `系数部分 '${coeffPart}' 无法转换为数值`,
+              },
+            };
+          }
         }
 
         const afterVar = term.substring(vIndex + 1);
         let power = 1;
         if (afterVar.startsWith('^')) {
-          power = parseInt(afterVar.substring(1), 10);
+          const powStr = afterVar.substring(1);
+          if (powStr.includes('.') || powStr.includes('/')) {
+            return {
+              poly: null,
+              error: `多项式指数必须是非负整数，不能是小数或分数: ${powStr}`,
+              diagnostic: {
+                isError: true,
+                code: 'NON_INTEGER_POWER',
+                message: `指数 '${powStr}' 非整数`,
+                detail: '多项式的幂次严格要求为非负整数 (0, 1, 2, ...)',
+              },
+            };
+          }
+          power = parseInt(powStr, 10);
           if (isNaN(power) || power < 0) {
-            return { poly: null, error: `项 ${term} 的指数无效` };
+            return {
+              poly: null,
+              error: `项 '${term}' 的指数无效`,
+              diagnostic: {
+                isError: true,
+                code: 'INVALID_EXPONENT',
+                message: `指数 '${powStr}' 无效`,
+                detail: '多项式各幂次必须为正整数或 0',
+              },
+            };
           }
         } else if (afterVar !== '') {
-          return { poly: null, error: `变量后的非法字符: ${afterVar}` };
+          return {
+            poly: null,
+            error: `变量 '${variable}' 后的字符无效: '${afterVar}'`,
+            diagnostic: {
+              isError: true,
+              code: 'EXTRA_CHARS_AFTER_VAR',
+              message: `变量后出现异常字符 '${afterVar}'`,
+              detail: `若表示指数请加 '^'，例如 '${variable}^2'`,
+              quickFix: input.replace(term, `${coeffPart}${variable}^${afterVar}`),
+            },
+          };
         }
 
-        if (power > 25) {
-          return { poly: null, error: "最高支持25次多项式" };
+        if (power > 30) {
+          return {
+            poly: null,
+            error: "最高支持 30 次多项式 (Maximum supported degree is 30)",
+            diagnostic: {
+              isError: true,
+              code: 'DEGREE_EXCEEDED',
+              message: '多项式次数过高 (最高支持 30 次)',
+              detail: `检测到 ${power} 次项。为保证浏览器计算精度与图表渲染速度，请使用不超过 30 次的多项式。`,
+            },
+          };
         }
 
         maxDegree = Math.max(maxDegree, power);
@@ -217,15 +462,23 @@ export function parsePolynomial(input: string, variable = 'x'): { poly: Polynomi
         variable,
       },
       error: null,
+      diagnostic: null,
     };
-  } catch {
-    return { poly: null, error: "解析多项式失败，请检查输入格式" };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      poly: null,
+      error: `多项式解析错误: ${msg}`,
+      diagnostic: {
+        isError: true,
+        code: 'PARSER_EXCEPTION',
+        message: '解析多项式出现异常，请检查语法格式',
+        detail: msg,
+      },
+    };
   }
 }
 
-/**
- * Format polynomial to display string (e.g. 2x^3 - 4x^2 + 3x - 5)
- */
 export function formatPolynomial(poly: Polynomial): string {
   const { coefficients, degree, variable } = poly;
   if (!coefficients || coefficients.length === 0) return "0";
@@ -269,9 +522,6 @@ export function formatPolynomial(poly: Polynomial): string {
   return terms.join(" ") || "0";
 }
 
-/**
- * Format polynomial to KaTeX LaTeX string
- */
 export function formatPolynomialLatex(poly: Polynomial): string {
   const { coefficients, degree, variable } = poly;
   if (!coefficients || coefficients.length === 0) return "0";
@@ -316,7 +566,7 @@ export function formatPolynomialLatex(poly: Polynomial): string {
 }
 
 export interface DivisorInfo {
-  a: number; // coefficient of x
+  a: number; // coefficient of variable
   b: number; // ax - b = 0 => x = b/a
   c: number; // root c = b / a
   cFraction: Fraction;
@@ -329,23 +579,57 @@ export interface DivisorInfo {
 /**
  * Parse divisor string:
  * - "x - 2" => a = 1, b = 2, c = 2
- * - "x + 3" => a = 1, b = -3, c = -3
  * - "2x - 1" => a = 2, b = 1, c = 0.5
- * - "2" or "-3" (direct root value c)
- * - "3/2" (direct root fraction)
+ * - "2" (direct root c = 2)
+ * - "3/2" (direct fraction root c = 1.5)
  * - Higher degree polynomial e.g. "x^2 - 1" for polynomial long division
  */
-export function parseDivisor(input: string, variable = 'x'): { divisor: DivisorInfo | null; error: string | null } {
+export function parseDivisor(
+  input: string,
+  variable = 'x'
+): { divisor: DivisorInfo | null; error: string | null; diagnostic: ParseDiagnostic | null } {
   try {
+    const diag = diagnoseExpressionSyntax(input, variable);
+    if (diag && diag.isError) {
+      return { divisor: null, error: diag.message, diagnostic: diag };
+    }
+
     let clean = normalizeMathString(input).replace(/[\s()]/g, '');
-    clean = clean.replace(/^[xc]=/i, '').replace(/=0$/i, '');
-    if (!clean) return { divisor: null, error: "请输入除式 (如 x - 2, 2x - 1 或数值 3)" };
+    clean = clean.replace(new RegExp(`^[${variable}c]=`, 'i'), '').replace(/=0$/i, '');
+    if (!clean) {
+      return {
+        divisor: null,
+        error: `请输入除式 (如 ${variable} - 2, 2${variable} - 1 或数值 3)`,
+        diagnostic: {
+          isError: true,
+          code: 'EMPTY_DIVISOR',
+          message: '除式为空',
+          detail: `请输入形如 ${variable} - c 的一次除式，或用于长除法的高次多项式。`,
+        },
+      };
+    }
+
+    // Check for division by zero
+    if (clean === '0') {
+      return {
+        divisor: null,
+        error: "除式不能为零 (Division by zero polynomial is undefined)",
+        diagnostic: {
+          isError: true,
+          code: 'ZERO_DIVISOR',
+          message: '除式不能为 0',
+          detail: '根据代数基本定理与除法算式，除式必须为非零多项式。',
+        },
+      };
+    }
 
     // 1. Direct number e.g. "2", "-3", "1.5"
     if (/^[+-]?[0-9]+(\.[0-9]+)?$/.test(clean)) {
       const c = parseFloat(clean);
       const frac = createFraction(c);
-      const divStr = c >= 0 ? `${variable} - ${formatFraction(frac)}` : `${variable} + ${formatFraction(createFraction(Math.abs(frac.n), frac.d))}`;
+      const divStr = c >= 0
+        ? `${variable} - ${formatFraction(frac)}`
+        : `${variable} + ${formatFraction(createFraction(Math.abs(frac.n), frac.d))}`;
       return {
         divisor: {
           a: 1,
@@ -357,6 +641,7 @@ export function parseDivisor(input: string, variable = 'x'): { divisor: DivisorI
           isLinear: true,
         },
         error: null,
+        diagnostic: null,
       };
     }
 
@@ -365,10 +650,19 @@ export function parseDivisor(input: string, variable = 'x'): { divisor: DivisorI
       const parts = clean.split('/');
       const n = parseInt(parts[0], 10);
       const d = parseInt(parts[1], 10);
+      if (d === 0) {
+        return {
+          divisor: null,
+          error: "分母不能为 0",
+          diagnostic: { isError: true, code: 'ZERO_DENOMINATOR', message: '分母不能为 0' },
+        };
+      }
       const frac = createFraction(n, d);
       const c = frac.n / frac.d;
       const fracLatex = formatFractionLatex(createFraction(Math.abs(frac.n), frac.d));
-      const divStr = c >= 0 ? `${variable} - ${formatFraction(frac)}` : `${variable} + ${formatFraction(createFraction(Math.abs(frac.n), frac.d))}`;
+      const divStr = c >= 0
+        ? `${variable} - ${formatFraction(frac)}`
+        : `${variable} + ${formatFraction(createFraction(Math.abs(frac.n), frac.d))}`;
       const divLatex = c >= 0 ? `${variable} - ${fracLatex}` : `${variable} + ${fracLatex}`;
       return {
         divisor: {
@@ -381,18 +675,26 @@ export function parseDivisor(input: string, variable = 'x'): { divisor: DivisorI
           isLinear: true,
         },
         error: null,
+        diagnostic: null,
       };
     }
 
     // 3. Divisor contains variable
     const polyParsed = parsePolynomial(clean, variable);
     if (polyParsed.error || !polyParsed.poly) {
-      return { divisor: null, error: polyParsed.error || "无法解析除式" };
+      return { divisor: null, error: polyParsed.error || "无法解析除式", diagnostic: polyParsed.diagnostic };
     }
 
     const poly = polyParsed.poly;
+    if (poly.degree === 0 && Math.abs(poly.coefficients[0]) < 1e-9) {
+      return {
+        divisor: null,
+        error: "除式不能为零 (Divisor cannot be zero polynomial)",
+        diagnostic: { isError: true, code: 'ZERO_DIVISOR', message: '除式不能为 0' },
+      };
+    }
+
     if (poly.degree === 1) {
-      // Linear divisor: a*x + constant = 0 => a*x - b = 0 => b = -constant
       const a = poly.coefficients[0];
       const constant = poly.coefficients[1] || 0;
       const b = -constant;
@@ -414,35 +716,40 @@ export function parseDivisor(input: string, variable = 'x'): { divisor: DivisorI
           rawPoly: poly,
         },
         error: null,
-      };
-    } else {
-      // Non-linear polynomial divisor (e.g. x^2 - 1)
-      return {
-        divisor: {
-          a: poly.coefficients[0],
-          b: 0,
-          c: 0,
-          cFraction: createFraction(0),
-          divisorString: formatPolynomial(poly),
-          divisorLatex: formatPolynomialLatex(poly),
-          isLinear: false,
-          rawPoly: poly,
-        },
-        error: null,
+        diagnostic: null,
       };
     }
-  } catch {
-    return { divisor: null, error: "解析除式失败" };
-  }
-}
 
-export interface DirectEvaluationStep {
-  power: number;
-  coeff: number;
-  c: number;
-  powerVal: number;
-  termProduct: number;
-  latexTerm: string;
+    // Degree 2 or higher (Linear for Remainder Theorem, but fully valid for Polynomial Long Division)
+    const divStr = formatPolynomial(poly);
+    const divLatex = formatPolynomialLatex(poly);
+    return {
+      divisor: {
+        a: poly.coefficients[0],
+        b: 0,
+        c: 0,
+        cFraction: createFraction(0, 1),
+        divisorString: divStr,
+        divisorLatex: divLatex,
+        isLinear: false,
+        rawPoly: poly,
+      },
+      error: null,
+      diagnostic: null,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      divisor: null,
+      error: `除式解析错误: ${msg}`,
+      diagnostic: {
+        isError: true,
+        code: 'DIVISOR_EXCEPTION',
+        message: '除式解析异常，请检查格式',
+        detail: msg,
+      },
+    };
+  }
 }
 
 export interface RemainderTheoremResult {
@@ -450,197 +757,242 @@ export interface RemainderTheoremResult {
   cFraction: Fraction;
   remainder: number;
   remainderFraction: Fraction;
-  steps: DirectEvaluationStep[];
+  steps: {
+    power: number;
+    coeff: number;
+    cPowerVal: number;
+    cPowerFraction: Fraction;
+    termVal: number;
+    termFraction: Fraction;
+    latex: string;
+  }[];
   directSubstitutionLatex: string;
   expandedCalculationLatex: string;
   isFactor: boolean;
 }
 
-/**
- * Direct evaluation: P(c) = a_n * c^n + ... + a_0
- */
 export function evaluateRemainderTheorem(poly: Polynomial, divisor: DivisorInfo): RemainderTheoremResult {
+  const { coefficients, degree, variable } = poly;
   const c = divisor.c;
-  const cFraction = divisor.cFraction;
-  const steps: DirectEvaluationStep[] = [];
+  const cFrac = divisor.cFraction;
 
-  let remainder = 0;
-  let remainderFraction = createFraction(0);
-  const directSubTerms: string[] = [];
-  const expandedTerms: string[] = [];
+  const steps = [];
+  let totalFraction = createFraction(0, 1);
+  const subTermsLatex: string[] = [];
+  const calcTermsLatex: string[] = [];
 
-  for (let i = 0; i < poly.coefficients.length; i++) {
-    const coeff = poly.coefficients[i];
-    const power = poly.degree - i;
-    const powerVal = Math.pow(c, power);
-    const termProduct = coeff * powerVal;
-    remainder += termProduct;
+  for (let i = 0; i < coefficients.length; i++) {
+    const coeff = coefficients[i];
+    const power = degree - i;
 
-    // Fractional calculation
-    const cPowerFrac = createFraction(Math.pow(cFraction.n, power), Math.pow(cFraction.d, power));
-    const termFrac = multFractions(createFraction(coeff), cPowerFrac);
-    remainderFraction = addFractions(remainderFraction, termFrac);
+    if (Math.abs(coeff) < 1e-9) continue;
 
-    const cFormatted = cFraction.d !== 1
-      ? `\\left(${formatFractionLatex(cFraction)}\\right)`
-      : (c < 0 ? `(${c})` : `${c}`);
-
-    const coeffStr = (coeff === 1 && power > 0) ? "" : (coeff === -1 && power > 0 ? "-" : `${coeff}`);
-    let termLatex = "";
-    if (power === 0) {
-      termLatex = coeff < 0 ? `(${coeff})` : `${coeff}`;
-    } else if (power === 1) {
-      termLatex = `${coeffStr} \\cdot ${cFormatted}`;
-    } else {
-      termLatex = `${coeffStr} \\cdot ${cFormatted}^{${power}}`;
+    let cPowerFraction = createFraction(1, 1);
+    for (let p = 0; p < power; p++) {
+      cPowerFraction = multFractions(cPowerFraction, cFrac);
     }
-    directSubTerms.push(termLatex);
+    const cPowerVal = fractionToDecimal(cPowerFraction);
 
-    const termProdStr = Number.isInteger(termProduct) ? termProduct.toString() : termProduct.toFixed(3).replace(/\.?0+$/, '');
-    expandedTerms.push(termProduct < 0 ? `(${termProdStr})` : termProdStr);
+    const coeffFraction = createFraction(coeff);
+    const termFraction = multFractions(coeffFraction, cPowerFraction);
+    const termVal = fractionToDecimal(termFraction);
+
+    totalFraction = addFractions(totalFraction, termFraction);
+
+    const cDisplay = cFrac.d === 1 ? `${cFrac.n}` : `\\left(${formatFractionLatex(cFrac)}\\right)`;
+    let subLatex = '';
+    if (power === 0) {
+      subLatex = coeff < 0 ? `(${coeff})` : `${coeff}`;
+    } else if (power === 1) {
+      subLatex = coeff === 1 ? `${cDisplay}` : coeff === -1 ? `-${cDisplay}` : `${coeff}(${cDisplay})`;
+    } else {
+      subLatex = coeff === 1 ? `${cDisplay}^{${power}}` : coeff === -1 ? `-${cDisplay}^{${power}}` : `${coeff}${cDisplay}^{${power}}`;
+    }
+    subTermsLatex.push(subLatex);
+
+    const termDisplayLatex = formatFractionLatex(termFraction);
+    calcTermsLatex.push(termFraction.n < 0 ? `(${termDisplayLatex})` : termDisplayLatex);
 
     steps.push({
       power,
       coeff,
-      c,
-      powerVal,
-      termProduct,
-      latexTerm: termLatex,
+      cPowerVal,
+      cPowerFraction,
+      termVal,
+      termFraction,
+      latex: subLatex,
     });
   }
 
-  const isFactor = Math.abs(remainder) < 1e-7 || remainderFraction.n === 0;
+  const remainder = fractionToDecimal(totalFraction);
+  const isFactor = Math.abs(remainder) < 1e-7;
+
+  let directSubstitutionLatex = subTermsLatex.join(" + ").replace(/\+\s*\-/g, "- ");
+  let expandedCalculationLatex = calcTermsLatex.join(" + ").replace(/\+\s*\-/g, "- ");
 
   return {
     c,
-    cFraction,
-    remainder: Math.round(remainder * 100000) / 100000,
-    remainderFraction,
+    cFraction: cFrac,
+    remainder,
+    remainderFraction: totalFraction,
     steps,
-    directSubstitutionLatex: directSubTerms.join(" + ").replace(/\+ \(-/g, "- "),
-    expandedCalculationLatex: expandedTerms.join(" + ").replace(/\+ \(-/g, "- "),
+    directSubstitutionLatex,
+    expandedCalculationLatex,
     isFactor,
   };
 }
 
 export interface SyntheticStep {
-  index: number;
-  power: number;
-  topCoeff: number;
-  productAdded: number;
-  bottomResult: number;
-  explanation: string;
+  columnIndex: number;
+  degree: number;
+  coeff: number;
+  carriedDown: number;
+  carriedFraction: Fraction;
+  product: number;
+  productFraction: Fraction;
+  sum: number;
+  sumFraction: Fraction;
 }
 
 export interface SyntheticDivisionResult {
   c: number;
   cFraction: Fraction;
-  divisorA: number;
+  aCoeff: number;
+  steps: SyntheticStep[];
   topRow: number[];
   middleRow: number[];
+  middleRowFractions: Fraction[];
   bottomRow: number[];
-  quotientCoefficients: number[];
+  bottomRowFractions: Fraction[];
+  quotientCoeffs: number[];
+  quotientCoeffsFractions: Fraction[];
   quotientPoly: Polynomial;
   remainder: number;
-  steps: SyntheticStep[];
-  summaryIdentityLatex: string;
+  remainderFraction: Fraction;
   isFactor: boolean;
+  nonMonicDivisor: boolean;
+  summaryIdentityLatex: string;
 }
 
-/**
- * Synthetic Division for linear divisor (ax - b)
- */
 export function performSyntheticDivision(poly: Polynomial, divisor: DivisorInfo): SyntheticDivisionResult {
-  const c = divisor.c;
-  const topRow = [...poly.coefficients];
+  const { coefficients, degree, variable } = poly;
+  const cFrac = divisor.cFraction;
+  const a = divisor.a;
+  const isNonMonic = Math.abs(a - 1) > 1e-9;
+
+  const topRow = [...coefficients];
   const middleRow: number[] = [0];
+  const middleRowFractions: Fraction[] = [createFraction(0, 1)];
   const bottomRow: number[] = [];
+  const bottomRowFractions: Fraction[] = [];
   const steps: SyntheticStep[] = [];
 
-  // Step 0: Bring down first coefficient
-  const first = topRow[0];
-  bottomRow.push(first);
+  let currentBottomFrac = createFraction(topRow[0]);
+  bottomRow.push(fractionToDecimal(currentBottomFrac));
+  bottomRowFractions.push(currentBottomFrac);
+
   steps.push({
-    index: 0,
-    power: poly.degree,
-    topCoeff: first,
-    productAdded: 0,
-    bottomResult: first,
-    explanation: `将最高次项系数 ${first} 直接下移落入底行。`,
+    columnIndex: 0,
+    degree: degree,
+    coeff: topRow[0],
+    carriedDown: topRow[0],
+    carriedFraction: currentBottomFrac,
+    product: 0,
+    productFraction: createFraction(0, 1),
+    sum: topRow[0],
+    sumFraction: currentBottomFrac,
   });
 
-  // Step 1 to N
   for (let i = 1; i < topRow.length; i++) {
-    const prevBottom = bottomRow[i - 1];
-    const product = prevBottom * c;
-    middleRow.push(product);
-    const sum = topRow[i] + product;
-    bottomRow.push(sum);
+    const productFrac = multFractions(currentBottomFrac, cFrac);
+    middleRow.push(fractionToDecimal(productFrac));
+    middleRowFractions.push(productFrac);
 
-    const isLast = i === topRow.length - 1;
-    const cDisplay = divisor.cFraction.d !== 1 ? formatFraction(divisor.cFraction) : `${c}`;
+    const coeffFrac = createFraction(topRow[i]);
+    const sumFrac = addFractions(coeffFrac, productFrac);
+    bottomRow.push(fractionToDecimal(sumFrac));
+    bottomRowFractions.push(sumFrac);
 
     steps.push({
-      index: i,
-      power: poly.degree - i,
-      topCoeff: topRow[i],
-      productAdded: product,
-      bottomResult: sum,
-      explanation: isLast
-        ? `将前一项结果 ${prevBottom} 乘以根 c = ${cDisplay} 得 ${product}；与常数项 ${topRow[i]} 相加，得到余数 R = ${sum}。`
-        : `将前一项结果 ${prevBottom} 乘以根 c = ${cDisplay} 得 ${product}；与系数 ${topRow[i]} 相加，得到 ${sum}。`,
+      columnIndex: i,
+      degree: degree - i,
+      coeff: topRow[i],
+      carriedDown: topRow[i],
+      carriedFraction: coeffFrac,
+      product: fractionToDecimal(productFrac),
+      productFraction: productFrac,
+      sum: fractionToDecimal(sumFrac),
+      sumFraction: sumFrac,
     });
+
+    currentBottomFrac = sumFrac;
   }
 
-  const remainder = bottomRow[bottomRow.length - 1];
-  let rawQuotientCoeffs = bottomRow.slice(0, bottomRow.length - 1);
+  const rawQuotientFractions = bottomRowFractions.slice(0, -1);
+  const rawQuotient = bottomRow.slice(0, -1);
+  const remainderFraction = bottomRowFractions[bottomRowFractions.length - 1];
+  const remainder = fractionToDecimal(remainderFraction);
 
-  // If divisor was (ax - b) where a != 1, divide quotient by a
-  if (divisor.a !== 1) {
-    rawQuotientCoeffs = rawQuotientCoeffs.map(val => val / divisor.a);
+  const quotientCoeffsFractions: Fraction[] = [];
+  const quotientCoeffs: number[] = [];
+
+  for (const qf of rawQuotientFractions) {
+    const adjusted = divFractions(qf, createFraction(a));
+    quotientCoeffsFractions.push(adjusted);
+    quotientCoeffs.push(fractionToDecimal(adjusted));
   }
 
   const quotientPoly: Polynomial = {
-    coefficients: rawQuotientCoeffs,
-    degree: Math.max(0, poly.degree - 1),
-    variable: poly.variable,
+    coefficients: quotientCoeffs,
+    degree: Math.max(0, degree - 1),
+    variable,
   };
 
   const isFactor = Math.abs(remainder) < 1e-7;
 
-  // Identity: P(x) = (Divisor) * Q(x) + R
   const pLatex = formatPolynomialLatex(poly);
-  const qLatex = formatPolynomialLatex(quotientPoly);
   const dLatex = divisor.divisorLatex;
+  const qLatex = formatPolynomialLatex(quotientPoly);
+  const rLatex = remainderFraction.d === 1 ? `${remainderFraction.n}` : formatFractionLatex(remainderFraction);
 
   let summaryIdentityLatex = `${pLatex} = (${dLatex})(${qLatex})`;
-  if (Math.abs(remainder) >= 1e-7) {
-    if (remainder > 0) summaryIdentityLatex += ` + ${remainder}`;
-    else summaryIdentityLatex += ` - ${Math.abs(remainder)}`;
+  if (!isFactor) {
+    if (remainder > 0) {
+      summaryIdentityLatex += ` + ${rLatex}`;
+    } else {
+      summaryIdentityLatex += ` - ${formatFractionLatex(createFraction(Math.abs(remainderFraction.n), remainderFraction.d))}`;
+    }
   }
 
   return {
-    c,
-    cFraction: divisor.cFraction,
-    divisorA: divisor.a,
+    c: divisor.c,
+    cFraction: cFrac,
+    aCoeff: a,
+    steps,
     topRow,
     middleRow,
+    middleRowFractions,
     bottomRow,
-    quotientCoefficients: rawQuotientCoeffs,
+    bottomRowFractions,
+    quotientCoeffs,
+    quotientCoeffsFractions,
     quotientPoly,
     remainder,
-    steps,
-    summaryIdentityLatex,
+    remainderFraction,
     isFactor,
+    nonMonicDivisor: isNonMonic,
+    summaryIdentityLatex,
   };
 }
 
 export interface LongDivisionStep {
-  stepNumber: number;
+  stepIndex: number;
+  quotientTermCoeff: number;
+  quotientTermDegree: number;
   quotientTermLatex: string;
-  currentWorkingPolyLatex: string;
-  multipliedDivisorLatex: string;
-  resultingRemainderLatex: string;
+  multipliedPoly: Polynomial;
+  subtractionResultPoly: Polynomial;
+  broughtDownTerm?: string;
   explanation: string;
 }
 
@@ -655,10 +1007,6 @@ export interface PolynomialLongDivisionResult {
   identityLatex: string;
 }
 
-/**
- * General Polynomial Long Division
- * Handles degree >= 1 divisors
- */
 export function performPolynomialLongDivision(
   dividend: Polynomial,
   divisor: DivisorInfo
@@ -670,103 +1018,96 @@ export function performPolynomialLongDivision(
     variable: v,
   };
 
-  const dDegree = divisorPoly.degree;
-  const leadDivCoeff = divisorPoly.coefficients[0];
+  const divCoeffs = divisorPoly.coefficients;
+  const divDeg = divisorPoly.degree;
+  const divLead = divCoeffs[0];
 
-  let currentWorkingCoeffs = [...dividend.coefficients];
-  let currentDegree = dividend.degree;
-
-  const quotientCoeffs: { power: number; coeff: number }[] = [];
   const steps: LongDivisionStep[] = [];
+  let currentWorkingCoeffs = [...dividend.coefficients];
+  const quotientCoeffs: number[] = [];
+
+  const initialQuotientDeg = dividend.degree - divDeg;
+  if (initialQuotientDeg < 0) {
+    return {
+      dividendPoly: dividend,
+      divisorPoly,
+      quotientPoly: { coefficients: [0], degree: 0, variable: v },
+      remainderPoly: dividend,
+      remainderVal: dividend.coefficients[dividend.coefficients.length - 1] || 0,
+      steps: [],
+      isFactor: false,
+      identityLatex: `${formatPolynomialLatex(dividend)} = (${formatPolynomialLatex(divisorPoly)})(0) + (${formatPolynomialLatex(dividend)})`,
+    };
+  }
 
   let stepCount = 0;
-  while (currentDegree >= dDegree && stepCount < 20) {
-    // Strip leading zeros
-    while (currentWorkingCoeffs.length > 0 && Math.abs(currentWorkingCoeffs[0]) < 1e-9) {
-      currentWorkingCoeffs.shift();
-      currentDegree--;
-    }
-
-    if (currentDegree < dDegree || currentWorkingCoeffs.length === 0) break;
-
+  while (currentWorkingCoeffs.length >= divCoeffs.length && stepCount < 20) {
     stepCount++;
-    const leadWorkingCoeff = currentWorkingCoeffs[0];
-    const qCoeff = leadWorkingCoeff / leadDivCoeff;
-    const qPower = currentDegree - dDegree;
+    const currentLead = currentWorkingCoeffs[0];
+    const currentDeg = currentWorkingCoeffs.length - 1;
+    const termDegree = currentDeg - divDeg;
 
-    quotientCoeffs.push({ power: qPower, coeff: qCoeff });
-
-    const multFullCoeffs = new Array(currentDegree + 1).fill(0);
-    for (let j = 0; j < divisorPoly.coefficients.length; j++) {
-      const p = currentDegree - j;
-      multFullCoeffs[currentDegree - p] = qCoeff * divisorPoly.coefficients[j];
+    if (Math.abs(currentLead) < 1e-9) {
+      currentWorkingCoeffs.shift();
+      quotientCoeffs.push(0);
+      continue;
     }
 
-    const workPoly: Polynomial = {
-      coefficients: [...currentWorkingCoeffs],
-      degree: currentDegree,
+    const termCoeff = currentLead / divLead;
+    quotientCoeffs.push(termCoeff);
+
+    const multCoeffs: number[] = [];
+    for (const c of divCoeffs) {
+      multCoeffs.push(c * termCoeff);
+    }
+
+    const nextWorkingCoeffs: number[] = [];
+    for (let i = 0; i < divCoeffs.length; i++) {
+      const diff = currentWorkingCoeffs[i] - multCoeffs[i];
+      if (i > 0) nextWorkingCoeffs.push(diff);
+    }
+    for (let i = divCoeffs.length; i < currentWorkingCoeffs.length; i++) {
+      nextWorkingCoeffs.push(currentWorkingCoeffs[i]);
+    }
+
+    const termPoly: Polynomial = {
+      coefficients: [termCoeff],
+      degree: termDegree,
       variable: v,
     };
-
-    const paddedWorking = [...currentWorkingCoeffs];
-    while (paddedWorking.length < currentDegree + 1) {
-      paddedWorking.push(0);
-    }
-
-    const nextWorking: number[] = [];
-    for (let j = 1; j <= currentDegree; j++) {
-      const diff = (paddedWorking[j] || 0) - (multFullCoeffs[j] || 0);
-      nextWorking.push(diff);
-    }
-
+    const multPoly: Polynomial = {
+      coefficients: multCoeffs,
+      degree: currentDeg,
+      variable: v,
+    };
     const subPoly: Polynomial = {
-      coefficients: multFullCoeffs.slice(0, divisorPoly.coefficients.length),
-      degree: currentDegree,
-      variable: v,
-    };
-
-    const remainderPolyTemp: Polynomial = {
-      coefficients: nextWorking.length > 0 ? nextWorking : [0],
-      degree: Math.max(0, currentDegree - 1),
-      variable: v,
-    };
-
-    const qTermSinglePoly: Polynomial = {
-      coefficients: [qCoeff],
-      degree: qPower,
+      coefficients: nextWorkingCoeffs.length > 0 ? nextWorkingCoeffs : [0],
+      degree: Math.max(0, nextWorkingCoeffs.length - 1),
       variable: v,
     };
 
     steps.push({
-      stepNumber: stepCount,
-      quotientTermLatex: formatPolynomialLatex(qTermSinglePoly),
-      currentWorkingPolyLatex: formatPolynomialLatex(workPoly),
-      multipliedDivisorLatex: formatPolynomialLatex(subPoly),
-      resultingRemainderLatex: formatPolynomialLatex(remainderPolyTemp),
-      explanation: `将首项 ${leadWorkingCoeff}${v}^${currentDegree} 除以 ${leadDivCoeff}${v}^${dDegree}，得到商项 ${formatPolynomialLatex(qTermSinglePoly)}；乘以除式并相减。`,
+      stepIndex: stepCount,
+      quotientTermCoeff: termCoeff,
+      quotientTermDegree: termDegree,
+      quotientTermLatex: formatPolynomialLatex(termPoly),
+      multipliedPoly: multPoly,
+      subtractionResultPoly: subPoly,
+      explanation: `首项相除: (${formatPolynomialLatex({ coefficients: [currentLead], degree: currentDeg, variable: v })}) ÷ (${formatPolynomialLatex({ coefficients: [divLead], degree: divDeg, variable: v })}) = ${formatPolynomialLatex(termPoly)}`,
     });
 
-    currentWorkingCoeffs = nextWorking;
-    currentDegree--;
-  }
-
-  const maxQDegree = Math.max(0, dividend.degree - dDegree);
-  const finalQCoeffs = new Array(maxQDegree + 1).fill(0);
-  for (const item of quotientCoeffs) {
-    if (item.power >= 0 && item.power <= maxQDegree) {
-      finalQCoeffs[maxQDegree - item.power] = item.coeff;
+    currentWorkingCoeffs = nextWorkingCoeffs;
+    while (currentWorkingCoeffs.length > 0 && Math.abs(currentWorkingCoeffs[0]) < 1e-9) {
+      currentWorkingCoeffs.shift();
     }
   }
 
   const quotientPoly: Polynomial = {
-    coefficients: finalQCoeffs,
-    degree: maxQDegree,
+    coefficients: quotientCoeffs.length > 0 ? quotientCoeffs : [0],
+    degree: Math.max(0, dividend.degree - divDeg),
     variable: v,
   };
 
-  while (currentWorkingCoeffs.length > 1 && Math.abs(currentWorkingCoeffs[0]) < 1e-9) {
-    currentWorkingCoeffs.shift();
-  }
   const remDegree = Math.max(0, currentWorkingCoeffs.length - 1);
   const remainderPoly: Polynomial = {
     coefficients: currentWorkingCoeffs.length > 0 ? currentWorkingCoeffs : [0],
@@ -822,9 +1163,6 @@ export function getIntegerFactors(num: number): number[] {
   return factors.sort((a, b) => a - b);
 }
 
-/**
- * Rational Root Theorem: Candidates = +/- (factors of a_0) / (factors of a_n)
- */
 export function computeRationalRootCandidates(poly: Polynomial): {
   constantTerm: number;
   leadingCoeff: number;
@@ -837,6 +1175,7 @@ export function computeRationalRootCandidates(poly: Polynomial): {
   const constantTerm = poly.coefficients[poly.coefficients.length - 1];
   const pFactors = getIntegerFactors(constantTerm);
   const qFactors = getIntegerFactors(leadingCoeff);
+
   const seen = new Set<string>();
   const candidates: RationalCandidate[] = [];
 
@@ -895,8 +1234,113 @@ export function computeRationalRootCandidates(poly: Polynomial): {
 }
 
 /**
- * Full polynomial factorization using Rational Roots + synthetic deflation
+ * Batch Evaluation: Evaluates polynomial remainders for an array of test points
  */
+export interface BatchEvaluationRow {
+  c: number;
+  cFraction: Fraction;
+  divisorString: string;
+  divisorLatex: string;
+  remainder: number;
+  remainderFraction: Fraction;
+  isFactor: boolean;
+  quotientPoly: Polynomial;
+  quotientLatex: string;
+}
+
+export function evaluateBatchRemainder(
+  poly: Polynomial,
+  points: number[]
+): BatchEvaluationRow[] {
+  const rows: BatchEvaluationRow[] = [];
+  const v = poly.variable;
+
+  for (const c of points) {
+    const cFraction = createFraction(c);
+    const divInfo: DivisorInfo = {
+      a: 1,
+      b: c,
+      c,
+      cFraction,
+      divisorString: c >= 0 ? `${v} - ${formatFraction(cFraction)}` : `${v} + ${formatFraction(createFraction(Math.abs(cFraction.n), cFraction.d))}`,
+      divisorLatex: c >= 0 ? `${v} - ${formatFractionLatex(cFraction)}` : `${v} + ${formatFractionLatex(createFraction(Math.abs(cFraction.n), cFraction.d))}`,
+      isLinear: true,
+    };
+
+    const remResult = evaluateRemainderTheorem(poly, divInfo);
+    const synthResult = performSyntheticDivision(poly, divInfo);
+
+    rows.push({
+      c,
+      cFraction,
+      divisorString: divInfo.divisorString,
+      divisorLatex: divInfo.divisorLatex,
+      remainder: remResult.remainder,
+      remainderFraction: remResult.remainderFraction,
+      isFactor: remResult.isFactor,
+      quotientPoly: synthResult.quotientPoly,
+      quotientLatex: formatPolynomialLatex(synthResult.quotientPoly),
+    });
+  }
+
+  return rows;
+}
+
+/**
+ * Curve point generation for SVG visualizer
+ */
+export function generatePolynomialCurvePoints(
+  poly: Polynomial,
+  cValue: number,
+  pointsCount = 140
+): { points: { x: number; y: number }[]; minX: number; maxX: number; minY: number; maxY: number; pOfC: number } {
+  const span = Math.max(4, Math.abs(cValue) + 3);
+  const minX = cValue - span;
+  const maxX = cValue + span;
+  const step = (maxX - minX) / pointsCount;
+  const points: { x: number; y: number }[] = [];
+
+  let pOfC = 0;
+  for (let i = 0; i <= pointsCount; i++) {
+    const x = minX + i * step;
+    let y = 0;
+    for (let j = 0; j < poly.coefficients.length; j++) {
+      const power = poly.degree - j;
+      y += poly.coefficients[j] * Math.pow(x, power);
+    }
+    points.push({ x, y });
+  }
+
+  for (let j = 0; j < poly.coefficients.length; j++) {
+    const power = poly.degree - j;
+    pOfC += poly.coefficients[j] * Math.pow(cValue, power);
+  }
+
+  const validYs = points.map(p => p.y).filter(y => !isNaN(y) && isFinite(y));
+  let minY = Math.min(...validYs, pOfC, 0);
+  let maxY = Math.max(...validYs, pOfC, 0);
+
+  const ySpan = maxY - minY;
+  if (ySpan > 240) {
+    const mid = pOfC;
+    minY = Math.max(minY, mid - 120);
+    maxY = Math.min(maxY, mid + 120);
+  }
+
+  const paddingY = Math.max(2, (maxY - minY) * 0.15);
+  minY -= paddingY;
+  maxY += paddingY;
+
+  return {
+    points,
+    minX,
+    maxX,
+    minY,
+    maxY,
+    pOfC,
+  };
+}
+
 export interface CompleteFactorizationResult {
   roots: { value: number; display: string; multiplicity: number }[];
   linearFactorsLatex: string;
@@ -919,8 +1363,8 @@ export function findFullPolynomialFactorization(poly: Polynomial): CompleteFacto
   const rootsFound: { value: number; display: string; multiplicity: number }[] = [];
   let currentCoeffs = [...poly.coefficients];
   let currentDegree = poly.degree;
-
   let iterations = 0;
+
   while (currentDegree > 2 && iterations < 12) {
     iterations++;
     const currentPoly: Polynomial = {
@@ -979,6 +1423,7 @@ export function findFullPolynomialFactorization(poly: Polynomial): CompleteFacto
 
   let remainingLeading = leading;
   const factorTerms: string[] = [];
+
   for (const r of rootsFound) {
     const frac = createFraction(r.value);
     let term = "";
@@ -1014,58 +1459,5 @@ export function findFullPolynomialFactorization(poly: Polynomial): CompleteFacto
     linearFactorsLatex,
     hasComplexRoots: hasComplex,
     notes: hasComplex ? "包含复数（非实数）根" : "所有分解根均为实数",
-  };
-}
-
-export function generatePolynomialCurvePoints(
-  poly: Polynomial,
-  cValue: number,
-  pointsCount = 120
-): { points: { x: number; y: number }[]; minX: number; maxX: number; minY: number; maxY: number; pOfC: number } {
-  const span = Math.max(4, Math.abs(cValue) + 3);
-  const minX = cValue - span;
-  const maxX = cValue + span;
-  const step = (maxX - minX) / pointsCount;
-
-  const points: { x: number; y: number }[] = [];
-  let pOfC = 0;
-
-  for (let i = 0; i <= pointsCount; i++) {
-    const x = minX + i * step;
-    let y = 0;
-    for (let j = 0; j < poly.coefficients.length; j++) {
-      const power = poly.degree - j;
-      y += poly.coefficients[j] * Math.pow(x, power);
-    }
-    points.push({ x, y });
-  }
-
-  for (let j = 0; j < poly.coefficients.length; j++) {
-    const power = poly.degree - j;
-    pOfC += poly.coefficients[j] * Math.pow(cValue, power);
-  }
-
-  const validYs = points.map(p => p.y).filter(y => !isNaN(y) && isFinite(y));
-  let minY = Math.min(...validYs, pOfC, 0);
-  let maxY = Math.max(...validYs, pOfC, 0);
-
-  const ySpan = maxY - minY;
-  if (ySpan > 200) {
-    const mid = pOfC;
-    minY = Math.max(minY, mid - 100);
-    maxY = Math.min(maxY, mid + 100);
-  }
-
-  const paddingY = Math.max(2, (maxY - minY) * 0.15);
-  minY -= paddingY;
-  maxY += paddingY;
-
-  return {
-    points,
-    minX,
-    maxX,
-    minY,
-    maxY,
-    pOfC,
   };
 }
