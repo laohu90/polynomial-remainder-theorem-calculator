@@ -1069,3 +1069,53 @@ export function generatePolynomialCurvePoints(
     pOfC,
   };
 }
+
+export interface BatchEvaluationRow {
+  c: number;
+  cFraction: Fraction;
+  divisorString: string;
+  divisorLatex: string;
+  remainder: number;
+  remainderFraction: Fraction;
+  isFactor: boolean;
+  quotientPoly: Polynomial;
+  quotientLatex: string;
+}
+
+export function evaluateBatchRemainder(
+  poly: Polynomial,
+  points: number[]
+): BatchEvaluationRow[] {
+  const rows: BatchEvaluationRow[] = [];
+  const v = poly.variable;
+
+  for (const c of points) {
+    const cFraction = createFraction(c);
+    const divInfo: DivisorInfo = {
+      a: 1,
+      b: c,
+      c,
+      cFraction,
+      divisorString: c >= 0 ? `${v} - ${formatFraction(cFraction)}` : `${v} + ${formatFraction(createFraction(Math.abs(cFraction.n), cFraction.d))}`,
+      divisorLatex: c >= 0 ? `${v} - ${formatFractionLatex(cFraction)}` : `${v} + ${formatFractionLatex(createFraction(Math.abs(cFraction.n), cFraction.d))}`,
+      isLinear: true,
+    };
+
+    const remResult = evaluateRemainderTheorem(poly, divInfo);
+    const synthResult = performSyntheticDivision(poly, divInfo);
+
+    rows.push({
+      c,
+      cFraction,
+      divisorString: divInfo.divisorString,
+      divisorLatex: divInfo.divisorLatex,
+      remainder: remResult.remainder,
+      remainderFraction: remResult.remainderFraction,
+      isFactor: remResult.isFactor,
+      quotientPoly: synthResult.quotientPoly,
+      quotientLatex: formatPolynomialLatex(synthResult.quotientPoly),
+    });
+  }
+
+  return rows;
+}

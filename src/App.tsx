@@ -12,6 +12,7 @@ import { PolynomialCurveVisualizer } from './components/PolynomialCurveVisualize
 import { PracticeQuizSection } from './components/PracticeQuizSection';
 import { EducationalGuideSection } from './components/EducationalGuideSection';
 import { Footer } from './components/Footer';
+import { BatchEvaluationSection } from './components/BatchEvaluationSection';
 import { parsePolynomial, parseDivisor } from './utils/mathEngine';
 
 export default function App() {
@@ -34,8 +35,26 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState<'calculator' | 'factor' | 'graph' | 'quiz' | 'guide'>('calculator');
-  const [currentPolyStr, setCurrentPolyStr] = useState<string>('2x^3 - 4x^2 + 3x - 5');
-  const [currentDivisorStr, setCurrentDivisorStr] = useState<string>('x - 2');
+  const [currentPolyStr, setCurrentPolyStr] = useState<string>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const p = params.get('p');
+      if (p) return p;
+    } catch {
+      // ignore
+    }
+    return '2x^3 - 4x^2 + 3x - 5';
+  });
+  const [currentDivisorStr, setCurrentDivisorStr] = useState<string>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const d = params.get('d');
+      if (d) return d;
+    } catch {
+      // ignore
+    }
+    return 'x - 2';
+  });
 
   const t = translations[lang] || translations.en;
 
@@ -131,6 +150,20 @@ export default function App() {
                 poly={parsed.poly}
                 divisor={parsed.divisor}
                 t={t}
+              />
+            ) : (
+              <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-600">
+                {t.enterPolyPrompt}
+              </div>
+            )
+          )}
+
+          {activeTab === 'batch' && (
+            parsed.poly ? (
+              <BatchEvaluationSection
+                poly={parsed.poly}
+                t={t}
+                onSelectDivisor={handleSelectCandidate}
               />
             ) : (
               <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-600">

@@ -78,10 +78,33 @@ ${t.divisionIdentity}: ${longDivResult.identityLatex}`;
   };
 
   const handleShare = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('p', formatPolynomialLatex(poly));
-    url.searchParams.set('d', divisor.divisorString);
-    handleCopy(url.toString(), 'share');
+    try {
+      const url = new URL(window.location.origin + window.location.pathname);
+      // Use raw polynomial and divisor strings for perfect round-trip restoration
+      const pStr = formatPolynomial(poly);
+      const dStr = divisor.divisorString;
+      url.searchParams.set('p', pStr);
+      url.searchParams.set('d', dStr);
+      
+      const shareUrl = url.toString();
+      window.history.replaceState({}, '', shareUrl);
+
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(shareUrl);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = shareUrl;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+
+      setCopiedType('share');
+      setTimeout(() => setCopiedType(null), 2500);
+    } catch (e) {
+      console.error('Share link generation failed:', e);
+    }
   };
 
   const handlePrint = () => {

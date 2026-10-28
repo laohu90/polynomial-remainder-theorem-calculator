@@ -1,12 +1,12 @@
 import React from 'react';
 import { Language, Translations } from '../utils/i18n';
-import { Calculator, Binary, TrendingUp, HelpCircle, BookOpen, Globe } from 'lucide-react';
+import { Calculator, Binary, TrendingUp, Layers, HelpCircle, BookOpen, Globe } from 'lucide-react';
 
 interface TopNavbarProps {
   currentLang: Language;
   onSelectLang: (lang: Language) => void;
-  activeTab: 'calculator' | 'factor' | 'graph' | 'quiz' | 'guide';
-  onSelectTab: (tab: 'calculator' | 'factor' | 'graph' | 'quiz' | 'guide') => void;
+  activeTab: 'calculator' | 'factor' | 'graph' | 'batch' | 'quiz' | 'guide';
+  onSelectTab: (tab: 'calculator' | 'factor' | 'graph' | 'batch' | 'quiz' | 'guide') => void;
   t: Translations;
 }
 
@@ -31,6 +31,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
     { id: 'calculator' as const, label: t.tabCalculator, icon: Calculator },
     { id: 'factor' as const, label: t.tabFactor, icon: Binary },
     { id: 'graph' as const, label: t.tabGraph, icon: TrendingUp },
+    { id: 'batch' as const, label: t.tabBatch, icon: Layers },
     { id: 'quiz' as const, label: t.tabQuiz, icon: HelpCircle },
     { id: 'guide' as const, label: t.tabGuide, icon: BookOpen },
   ];

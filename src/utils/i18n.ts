@@ -9,6 +9,7 @@ export interface Translations {
   tabCalculator: string;
   tabFactor: string;
   tabGraph: string;
+  tabBatch: string;
   tabQuiz: string;
   tabGuide: string;
 
@@ -142,6 +143,7 @@ export const translations: Record<Language, Translations> = {
     tabCalculator: "余数与除法计算",
     tabFactor: "因式定理与有理根",
     tabGraph: "函数曲线可视化",
+    tabBatch: "批量求值分析",
     tabQuiz: "互动习题自测",
     tabGuide: "定理原理与速查",
 
@@ -263,6 +265,7 @@ export const translations: Record<Language, Translations> = {
     tabCalculator: "Remainder & Division",
     tabFactor: "Factor Theorem & Roots",
     tabGraph: "Curve & Geometry",
+    tabBatch: "Batch Evaluation",
     tabQuiz: "Interactive Quiz",
     tabGuide: "Concepts & Guide",
 
