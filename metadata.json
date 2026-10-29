@@ -1,6 +1,6 @@
 {
   "name": "Polynomial Remainder Theorem & Division Laboratory",
-  "description": "Rigorous academic computational laboratory for polynomial remainder theorem, synthetic division (Ruffini's rule), polynomial long division, and factor verification with parametric variables and batch evaluation.",
+  "description": "Rigorous academic computational laboratory for polynomial remainder theorem, synthetic division (Ruffini's rule), polynomial long division, factor verification, and batch evaluation.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
